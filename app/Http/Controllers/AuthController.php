@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
+use Laravel\Socialite\Facades\Socialite;
 
 class AuthController extends Controller
 {
@@ -147,5 +148,53 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('login');
+    }
+
+    /**
+     * Redirect to Google OAuth
+     */
+    public function redirectToGoogle()
+    {
+        return Socialite::driver('google')->redirect();
+    }
+
+    /**
+     * Handle Google OAuth callback
+     */
+    public function handleGoogleCallback()
+    {
+        try {
+            $googleUser = Socialite::driver('google')->user();
+            
+            // Check if user exists
+            $user = User::where('email', $googleUser->getEmail())->first();
+            
+            if ($user) {
+                // User exists, just login
+                Auth::login($user);
+                return redirect()->route('dashboard')->with('success', 'Logged in successfully with Google!');
+            } else {
+                // Create new user
+                $user = User::create([
+                    'name' => $googleUser->getName(),
+                    'email' => $googleUser->getEmail(),
+                    'password' => Hash::make(uniqid()), // Random password since Google handles auth
+                    'email_verified_at' => now(), // Google email is already verified
+                    'otp' => null,
+                    'otp_expires_at' => null,
+                ]);
+                
+                // Set profile picture if available
+                if ($googleUser->getAvatar()) {
+                    // You can download and save the avatar if needed
+                    // For now, we'll just store the URL
+                }
+                
+                Auth::login($user);
+                return redirect()->route('dashboard')->with('success', 'Account created and logged in with Google!');
+            }
+        } catch (\Exception $e) {
+            return redirect()->route('login')->withErrors(['error' => 'Failed to login with Google. Please try again.']);
+        }
     }
 }

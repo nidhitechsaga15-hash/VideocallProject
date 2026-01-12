@@ -302,6 +302,51 @@
         height: 100vh !important;
         max-height: 100vh !important;
     }
+    
+    /* Emoji picker styling */
+    #emojiPickerContainer {
+        border: 1px solid #e0e0e0;
+    }
+    
+    #emojiPicker button:hover {
+        background: #f0f0f0 !important;
+        border-radius: 8px;
+    }
+    
+    /* Mobile emoji picker positioning */
+    #emojiPickerContainer {
+        max-width: 100% !important;
+        left: 0 !important;
+        right: 0 !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+    
+    /* Mobile location modal styling */
+    #locationOptionsModal .modal-dialog {
+        margin: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        height: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    #locationOptionsModal .modal-content {
+        width: 90% !important;
+        max-width: 400px !important;
+        border-radius: 12px !important;
+        margin: auto !important;
+    }
+    
+    #locationOptionsModal .modal-backdrop {
+        z-index: 9999 !important;
+    }
+    
+    #locationOptionsModal {
+        z-index: 10000 !important;
+    }
 }
 </style>
 <div class="container-fluid p-0" style="height: calc(100vh - 60px);">
@@ -507,19 +552,113 @@
             </div>
             
             <!-- Chat Input Area -->
-            <div class="bg-white border-top p-2" id="chatInputArea" style="display: none;">
+            <div class="bg-white border-top p-2" id="chatInputArea" style="display: none; position: relative;">
+                <!-- Media Preview Area (Hidden by default) -->
+                <div id="mediaPreviewArea" class="d-none mb-2" style="position: relative; border-radius: 8px; overflow: visible !important; background: #f0f2f5; padding: 8px;">
+                    <button type="button" class="btn btn-danger rounded-circle d-flex align-items-center justify-content-center position-absolute" 
+                            onclick="clearMediaPreview()" 
+                            style="z-index: 1050 !important; top: 8px !important; right: 8px !important; width: 40px !important; height: 40px !important; padding: 0 !important; line-height: 1 !important; border: 3px solid white !important; box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important; background-color: #dc3545 !important; display: flex !important;">
+                        <i class="bi bi-x-lg" style="font-size: 1.2rem !important; font-weight: bold !important; color: white !important; line-height: 1;"></i>
+                    </button>
+                    <div id="mediaPreviewContent" style="position: relative; z-index: 1;"></div>
+                    <input type="text" class="form-control mt-2" id="mediaCaptionInput" 
+                           placeholder="Add a caption..." 
+                           style="background: white; border: 1px solid #e0e0e0; border-radius: 6px; padding: 0.5rem;">
+                </div>
+                
+                <!-- Attachment Menu (Hidden by default) -->
+                <div id="attachmentMenu" class="d-none" style="position: absolute; bottom: 100%; left: 0; margin-bottom: 8px; z-index: 1001; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 16px; width: 300px;">
+                    <div class="row g-3">
+                        <div class="col-4 text-center">
+                            <button class="btn btn-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" 
+                                    onclick="openFileInput('document')" 
+                                    style="width: 60px; height: 60px; border: none; background: #e3f2fd;">
+                                <i class="bi bi-file-earmark-text fs-4" style="color: #2196f3;"></i>
+                            </button>
+                            <small class="d-block" style="font-size: 0.75rem; color: #54656f;">Document</small>
+                        </div>
+                        <div class="col-4 text-center">
+                            <button class="btn btn-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" 
+                                    onclick="openFileInput('camera')" 
+                                    style="width: 60px; height: 60px; border: none; background: #ffebee;">
+                                <i class="bi bi-camera-fill fs-4" style="color: #f44336;"></i>
+                            </button>
+                            <small class="d-block" style="font-size: 0.75rem; color: #54656f;">Camera</small>
+                        </div>
+                        <div class="col-4 text-center">
+                            <button class="btn btn-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" 
+                                    onclick="openFileInput('gallery')" 
+                                    style="width: 60px; height: 60px; border: none; background: #f3e5f5;">
+                                <i class="bi bi-images fs-4" style="color: #9c27b0;"></i>
+                            </button>
+                            <small class="d-block" style="font-size: 0.75rem; color: #54656f;">Gallery</small>
+                        </div>
+                        <div class="col-4 text-center">
+                            <button class="btn btn-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" 
+                                    onclick="openFileInput('audio')" 
+                                    style="width: 60px; height: 60px; border: none; background: #fff3e0;">
+                                <i class="bi bi-headphones fs-4" style="color: #ff9800;"></i>
+                            </button>
+                            <small class="d-block" style="font-size: 0.75rem; color: #54656f;">Audio</small>
+                        </div>
+                        <div class="col-4 text-center">
+                            <button class="btn btn-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" 
+                                    onclick="openFileInput('video')" 
+                                    style="width: 60px; height: 60px; border: none; background: #e8f5e9;">
+                                <i class="bi bi-camera-video-fill fs-4" style="color: #4caf50;"></i>
+                            </button>
+                            <small class="d-block" style="font-size: 0.75rem; color: #54656f;">Video</small>
+                        </div>
+                        <div class="col-4 text-center">
+                            <button class="btn btn-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" 
+                                    onclick="openFileInput('location')" 
+                                    style="width: 60px; height: 60px; border: none; background: #e0f2f1;">
+                                <i class="bi bi-geo-alt-fill fs-4" style="color: #009688;"></i>
+                            </button>
+                            <small class="d-block" style="font-size: 0.75rem; color: #54656f;">Location</small>
+                        </div>
+                        <div class="col-4 text-center">
+                            <button class="btn btn-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" 
+                                    onclick="openFileInput('contact')" 
+                                    style="width: 60px; height: 60px; border: none; background: #fff9e6;">
+                                <i class="bi bi-person-vcard-fill fs-4" style="color: #ffc107;"></i>
+                            </button>
+                            <small class="d-block" style="font-size: 0.75rem; color: #54656f;">Contact</small>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="d-flex align-items-center gap-2">
-                    <button class="btn btn-sm rounded-circle" style="width: 40px; height: 40px; background: #f0f2f5; border: none; color: #54656f;">
+                    <button class="btn btn-sm rounded-circle" id="attachmentBtn" onclick="toggleAttachmentMenu(event)" 
+                            style="width: 40px; height: 40px; background: #f0f2f5; border: none; color: #54656f;">
+                        <i class="bi bi-paperclip"></i>
+                    </button>
+                    <button class="btn btn-sm rounded-circle" id="emojiPickerBtn" onclick="toggleEmojiPicker(event)" 
+                            style="width: 40px; height: 40px; background: #f0f2f5; border: none; color: #54656f;">
                         <i class="bi bi-emoji-smile"></i>
                     </button>
                     <input type="text" class="form-control rounded-pill border-0" id="chatMessageInput" 
                            placeholder="Type a message" 
                            style="background: #f0f2f5; padding: 0.5rem 1rem;"
                            onkeypress="handleChatKeyPress(event)">
-                    <button class="btn btn-sm rounded-circle" onclick="sendChatMessage()" 
+                    <button class="btn btn-sm rounded-circle" id="sendButton" onclick="sendChatMessage()" 
                             style="width: 40px; height: 40px; background: #008069; border: none; color: white;">
                         <i class="bi bi-send-fill"></i>
                     </button>
+                </div>
+                
+                <!-- Hidden File Inputs -->
+                <input type="file" id="fileInputDocument" accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx" style="display: none;" onchange="handleFileSelect(event, 'file')">
+                <input type="file" id="fileInputCamera" accept="image/*" capture="environment" style="display: none;" onchange="handleFileSelect(event, 'image')">
+                <input type="file" id="fileInputGallery" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/heic,image/heif" style="display: none;" onchange="handleFileSelect(event, 'image')">
+                <input type="file" id="fileInputAudio" accept="audio/*" style="display: none;" onchange="handleFileSelect(event, 'audio')">
+                <input type="file" id="fileInputVideo" accept="video/*" style="display: none;" onchange="handleFileSelect(event, 'video')">
+                
+                <!-- Emoji Picker Container -->
+                <div id="emojiPickerContainer" style="display: none; position: absolute; bottom: 100%; left: 0; margin-bottom: 8px; z-index: 1000; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 12px; max-width: 320px; max-height: 300px; overflow-y: auto;">
+                    <div id="emojiPicker" style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px;">
+                        <!-- Emojis will be loaded here -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -559,9 +698,16 @@
     <div class="container-fluid px-0">
         <div class="row g-0">
             <!-- Users List Button -->
-            <div class="col-4 text-center py-2" onclick="showUsersList()" style="cursor: pointer;">
-                <div class="d-flex flex-column align-items-center">
-                     <i class="bi bi-chat-square-fill fs-5 text-primary mb-1" id="usersNavIcon"></i>
+            <div class="col-4 text-center py-2 position-relative" onclick="showUsersList()" style="cursor: pointer;">
+                <div class="d-flex flex-column align-items-center position-relative" style="width: 100%;">
+                    <div class="position-relative d-inline-block">
+                        <i class="bi bi-chat-square-fill fs-5 text-primary mb-1" id="usersNavIcon"></i>
+                        <!-- Unread Count Badge -->
+                        <span class="badge bg-danger rounded-pill position-absolute d-flex align-items-center justify-content-center" 
+                              id="footerUnreadBadge" 
+                              style="display: none; min-width: 20px; height: 20px; font-size: 0.7rem; font-weight: 700; padding: 0 5px; top: -8px; right: -8px; z-index: 10; color: white !important; background-color: #dc3545 !important; border: 2px solid white !important; box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important; line-height: 1.2;">
+                        </span>
+                    </div>
                     <small class="text-muted" style="font-size: 0.7rem;" id="usersNavText">Chats</small>
                 </div>
             </div>
@@ -761,6 +907,72 @@
     </div>
 </div>
 
+<!-- Location Options Modal -->
+<div class="modal fade" id="locationOptionsModal" tabindex="-1" aria-labelledby="locationOptionsModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false" style="z-index: 10000 !important;">
+    <div class="modal-dialog modal-dialog-centered" style="margin: 0 !important; max-width: 100% !important; width: 100% !important; height: 100% !important; display: flex !important; align-items: center !important; justify-content: center !important;">
+        <div class="modal-content" style="width: 90% !important; max-width: 400px !important; border-radius: 12px !important; margin: auto !important;">
+            <div class="modal-header border-0 pb-0" style="padding: 20px 20px 10px 20px !important;">
+                <h5 class="modal-title" id="locationOptionsModalLabel" style="font-size: 1.1rem !important; font-weight: 600 !important;">
+                    <i class="bi bi-geo-alt-fill me-2 text-primary"></i>Share Location
+                </h5>
+                <button type="button" id="closeLocationModalBtn" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="font-size: 1.2rem !important; pointer-events: auto !important; touch-action: manipulation; -webkit-tap-highlight-color: transparent;"></button>
+            </div>
+            <div class="modal-body p-4" style="padding: 20px !important;">
+                <div class="d-flex flex-column gap-3">
+                    <!-- Current Location Option -->
+                    <button type="button" class="btn btn-outline-primary d-flex align-items-center p-3 rounded-3" 
+                            onclick="shareCurrentLocation()" 
+                            style="border: 2px solid #008069 !important; background: white !important; text-align: left !important; width: 100% !important; min-height: 70px !important; transition: all 0.2s;">
+                        <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center me-3 flex-shrink-0" 
+                             style="width: 50px !important; height: 50px !important; background: #008069 !important;">
+                            <i class="bi bi-geo-alt-fill text-white" style="font-size: 1.5rem !important;"></i>
+                        </div>
+                        <div class="flex-grow-1 text-start">
+                            <div class="fw-bold" style="color: #111b21 !important; font-size: 1rem !important;">Share Current Location</div>
+                            <small class="text-muted" style="font-size: 0.85rem !important;">Share your current location</small>
+                        </div>
+                        <i class="bi bi-chevron-right text-muted flex-shrink-0" style="font-size: 1.2rem !important;"></i>
+                    </button>
+                    
+                    <!-- Live Location Option -->
+                    <button type="button" class="btn btn-outline-success d-flex align-items-center p-3 rounded-3" 
+                            onclick="shareLiveLocation()" 
+                            style="border: 2px solid #25d366 !important; background: white !important; text-align: left !important; width: 100% !important; min-height: 70px !important; transition: all 0.2s;">
+                        <div class="rounded-circle bg-success d-flex align-items-center justify-content-center me-3 flex-shrink-0" 
+                             style="width: 50px !important; height: 50px !important; background: #25d366 !important;">
+                            <i class="bi bi-broadcast-pin text-white" style="font-size: 1.5rem !important;"></i>
+                        </div>
+                        <div class="flex-grow-1 text-start">
+                            <div class="fw-bold" style="color: #111b21 !important; font-size: 1rem !important;">Share Live Location</div>
+                            <small class="text-muted" style="font-size: 0.85rem !important;">Share your real-time location</small>
+                        </div>
+                        <i class="bi bi-chevron-right text-muted flex-shrink-0" style="font-size: 1.2rem !important;"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Contact Selector Modal -->
+<div class="modal fade" id="contactSelectorModal" tabindex="-1" aria-labelledby="contactSelectorModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false" style="z-index: 10000 !important;">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="margin: 0 !important; max-width: 100% !important; width: 100% !important; height: 100% !important; display: flex !important; align-items: center !important; justify-content: center !important;">
+        <div class="modal-content" style="width: 90% !important; max-width: 400px !important; border-radius: 12px !important; margin: auto !important; max-height: 80vh;">
+            <div class="modal-header border-0 pb-0" style="padding: 20px 20px 10px 20px !important;">
+                <h5 class="modal-title" id="contactSelectorModalLabel" style="font-size: 1.1rem !important; font-weight: 600 !important;">
+                    <i class="bi bi-person-vcard-fill me-2 text-warning"></i>Share Contact
+                </h5>
+                <button type="button" id="closeContactModalBtn" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="font-size: 1.2rem !important; pointer-events: auto !important; touch-action: manipulation; -webkit-tap-highlight-color: transparent;"></button>
+            </div>
+            <div class="modal-body p-3" style="padding: 15px !important; max-height: calc(80vh - 100px); overflow-y: auto;">
+                <div id="contactSelectorList" class="list-group list-group-flush">
+                    <!-- Contacts will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Incoming Call Modal -->
 <div class="modal fade" id="incomingCallModal" tabindex="-1" aria-labelledby="incomingCallModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
@@ -832,9 +1044,15 @@ let incomingCallModal = null;
 
 // Initialize call notification system
 document.addEventListener('DOMContentLoaded', function() {
+    // Stop any active live location sessions (in case of page refresh)
+    stopLiveLocation();
+    
     // Initialize Bootstrap modals
     incomingCallModal = new bootstrap.Modal(document.getElementById('incomingCallModal'));
     window.profileEditModal = new bootstrap.Modal(document.getElementById('profileEditModal'));
+    
+    // Initialize emoji picker
+    initEmojiPicker();
     
     // Mobile: Ensure users sidebar is visible by default
     if (window.innerWidth <= 768) {
@@ -858,6 +1076,26 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Start checking for incoming calls
     startCallChecking();
+    
+    // Calculate initial total unread count from server data
+    @php
+        $totalUnreadCount = 0;
+        if (isset($unreadCounts)) {
+            $totalUnreadCount = array_sum($unreadCounts);
+        }
+    @endphp
+    const initialTotalUnread = {{ $totalUnreadCount }};
+    const footerBadge = document.getElementById('footerUnreadBadge');
+    if (footerBadge) {
+        if (initialTotalUnread > 0) {
+            footerBadge.textContent = initialTotalUnread > 99 ? '99+' : initialTotalUnread;
+            footerBadge.style.setProperty('display', 'block', 'important');
+        } else {
+            // Hide badge completely if no unread messages
+            footerBadge.style.setProperty('display', 'none', 'important');
+            footerBadge.textContent = '';
+        }
+    }
     
     // Update unread counts on page load
     updateUnreadCounts();
@@ -957,15 +1195,32 @@ function checkIncomingCalls() {
     })
     .then(response => response.json())
     .then(data => {
+        // Debug log - check API response
+        console.log('Incoming Calls API Response:', {
+            count: data.count,
+            calls: data.calls,
+            firstCall: data.calls && data.calls.length > 0 ? data.calls[0] : null
+        });
+        
         // Show modal for incoming calls automatically (badge removed, but modal still works)
         if (data.count > 0 && data.calls.length > 0) {
+            const firstCall = data.calls[0];
+            
+            // Debug log - check call type in API response
+            console.log('First Incoming Call:', {
+                id: firstCall.id,
+                room_id: firstCall.room_id,
+                type: firstCall.type,
+                roomIdStartsWithAudio: firstCall.room_id ? firstCall.room_id.startsWith('audio_') : false
+            });
+            
             // Show modal for first incoming call automatically
             const modalElement = document.getElementById('incomingCallModal');
             if (modalElement) {
                 const isModalShown = modalElement.classList.contains('show');
                 
-                if (!isModalShown && incomingCallModal && data.calls[0]) {
-                    showIncomingCallModal(data.calls[0]);
+                if (!isModalShown && incomingCallModal && firstCall) {
+                    showIncomingCallModal(firstCall);
                 }
             }
         }
@@ -995,26 +1250,82 @@ function showIncomingCallModal(call) {
         callerEmailEl.textContent = call.caller.email || '';
     }
     
-    // Show call type (video or audio)
+    // CRITICAL: ALWAYS check room_id FIRST - this is the source of truth
+    // Room ID determines call type, NOT API response
+    let callType = 'video'; // Default
+    
+    if (call.room_id) {
+        // Check room_id prefix - this is the most reliable way
+        if (call.room_id.startsWith('audio_')) {
+            callType = 'audio';
+        } else if (call.room_id.startsWith('group_')) {
+            // For group calls, use API response type if available
+            callType = (call.type || 'video').toLowerCase();
+        } else {
+            // Regular video calls (room_ prefix or no prefix)
+            callType = 'video';
+        }
+    } else if (call.type) {
+        // Fallback: use API response only if room_id not available
+        callType = call.type.toLowerCase();
+    }
+    
+    // Final verification - ALWAYS trust room_id for audio calls
+    if (call.room_id && call.room_id.startsWith('audio_')) {
+        callType = 'audio';
+    }
+    
+    // Ensure callType is lowercase
+    callType = callType.toLowerCase();
+    
+    // Debug log
+    console.log('Incoming Call Type:', {
+        originalType: call.type,
+        roomId: call.room_id,
+        roomIdStartsWithAudio: call.room_id ? call.room_id.startsWith('audio_') : false,
+        finalType: callType,
+        willShowAudio: callType === 'audio'
+    });
+    
+    // Show call type (video or audio) - FORCE UPDATE
     const callTypeIcon = document.getElementById('callTypeIcon');
     const callTypeText = document.getElementById('callTypeText');
     
-    if (call.type === 'audio') {
+    // Final check - ALWAYS trust room_id
+    if (call.room_id && String(call.room_id).trim().startsWith('audio_')) {
+        callType = 'audio';
+    }
+    
+    console.log('Setting Incoming Call Icon:', {
+        callType: callType,
+        roomId: call.room_id,
+        willShowAudio: callType === 'audio'
+    });
+    
+    if (callType === 'audio') {
+        // Audio call - show telephone icon and "Audio Call" text
         if (callTypeIcon) {
             callTypeIcon.className = 'bi bi-telephone-fill fs-2';
+            callTypeIcon.setAttribute('class', 'bi bi-telephone-fill fs-2');
         }
         if (callTypeText) {
             callTypeText.textContent = 'Audio Call';
+            callTypeText.innerText = 'Audio Call';
             callTypeText.className = 'text-info fw-semibold mb-4';
         }
+        console.log('✓ Incoming Call: Set to Audio Call (telephone icon)');
     } else {
+        // Video call - show camera icon and "Video Call" text
         if (callTypeIcon) {
             callTypeIcon.className = 'bi bi-camera-video-fill fs-2';
+            callTypeIcon.setAttribute('class', 'bi bi-camera-video-fill fs-2');
         }
         if (callTypeText) {
             callTypeText.textContent = 'Video Call';
+            callTypeText.innerText = 'Video Call';
             callTypeText.className = 'text-success fw-semibold mb-4';
         }
+        console.log('✓ Incoming Call: Set to Video Call (camera icon)');
     }
     
     // Show modal
@@ -1617,6 +1928,25 @@ function updateUnreadCounts() {
                 orderedItems.forEach(item => usersList.appendChild(item));
             }
             
+            // Calculate total unread count for footer badge
+            let totalUnreadCount = 0;
+            data.conversations.forEach(conv => {
+                totalUnreadCount += conv.unread_count || 0;
+            });
+            
+            // Update footer badge - only show if there are unread messages
+            const footerBadge = document.getElementById('footerUnreadBadge');
+            if (footerBadge) {
+                if (totalUnreadCount > 0) {
+                    footerBadge.textContent = totalUnreadCount > 99 ? '99+' : totalUnreadCount;
+                    footerBadge.style.setProperty('display', 'block', 'important');
+                } else {
+                    // Hide badge completely if no unread messages
+                    footerBadge.style.setProperty('display', 'none', 'important');
+                    footerBadge.textContent = '';
+                }
+            }
+            
             // Update badges for each user
             data.conversations.forEach(conv => {
                 const userItem = document.querySelector(`[data-user-id="${conv.user_id}"]`);
@@ -1688,6 +2018,10 @@ function loadChatMessages(userId, silent = false) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
+            // Messages are automatically marked as read when fetched via getMessages API
+            // Update unread counts immediately after loading messages
+            updateUnreadCounts();
+            
             // Move user to top when new messages arrive (incoming messages)
             if (data.messages && data.messages.length > 0) {
                 const lastMessage = data.messages[data.messages.length - 1];
@@ -1910,6 +2244,180 @@ function displayChatMessages(messages, shouldScroll = false) {
             }
         }
         
+        // Handle different message types
+        let mediaContent = '';
+        if (msg.type === 'image' && msg.file_path) {
+            const imageUrl = '{{ asset("storage") }}/' + msg.file_path;
+            const imageId = 'img_' + msg.id + '_' + Date.now();
+            mediaContent = `
+                <div class="mb-2 image-container" 
+                     id="${imageId}_container"
+                     data-image-url="${imageUrl}"
+                     style="border-radius: 8px; overflow: hidden; max-width: 300px; cursor: pointer; position: relative; -webkit-tap-highlight-color: rgba(0,0,0,0.1); touch-action: manipulation;"
+                     onclick="openMediaViewer('${imageUrl}', 'image')">
+                    <img src="${imageUrl}" alt="Image" 
+                         id="${imageId}"
+                         style="width: 100%; height: auto; display: block; pointer-events: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;">
+                </div>
+            `;
+            
+            // Add touch event listener after DOM update for mobile
+            setTimeout(() => {
+                const container = document.getElementById(imageId + '_container');
+                if (container) {
+                    let touchStartTime = 0;
+                    let touchStartY = 0;
+                    
+                    container.addEventListener('touchstart', function(e) {
+                        touchStartTime = Date.now();
+                        touchStartY = e.touches[0].clientY;
+                        this.style.opacity = '0.8';
+                    }, { passive: true });
+                    
+                    container.addEventListener('touchend', function(e) {
+                        const touchEndTime = Date.now();
+                        const touchDuration = touchEndTime - touchStartTime;
+                        const touchEndY = e.changedTouches[0].clientY;
+                        const touchDistance = Math.abs(touchEndY - touchStartY);
+                        
+                        this.style.opacity = '1';
+                        
+                        // Only open if it was a quick tap (not a scroll)
+                        if (touchDuration < 300 && touchDistance < 10) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const url = this.getAttribute('data-image-url');
+                            if (url) {
+                                openMediaViewer(url, 'image');
+                            }
+                        }
+                    }, { passive: false });
+                }
+            }, 100);
+        } else if (msg.type === 'video' && msg.file_path) {
+            const videoUrl = '{{ asset("storage") }}/' + msg.file_path;
+            mediaContent = `
+                <div class="mb-2" style="border-radius: 8px; overflow: hidden; max-width: 300px;">
+                    <video controls style="width: 100%; height: auto; display: block; max-height: 300px;">
+                        <source src="${videoUrl}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+            `;
+        } else if (msg.type === 'audio' && msg.file_path) {
+            const audioUrl = '{{ asset("storage") }}/' + msg.file_path;
+            mediaContent = `
+                <div class="mb-2 d-flex align-items-center gap-2" style="background: rgba(0,0,0,0.05); padding: 12px; border-radius: 8px;">
+                    <i class="bi bi-music-note-beamed fs-4" style="color: #008069;"></i>
+                    <audio controls style="flex: 1; max-width: 250px;">
+                        <source src="${audioUrl}" type="audio/mpeg">
+                        Your browser does not support the audio tag.
+                    </audio>
+                </div>
+            `;
+        } else if (msg.type === 'file' && msg.file_path) {
+            const fileUrl = '{{ asset("storage") }}/' + msg.file_path;
+            const fileName = msg.message || 'File';
+            mediaContent = `
+                <div class="mb-2 d-flex align-items-center gap-2" style="background: rgba(0,0,0,0.05); padding: 12px; border-radius: 8px; cursor: pointer;" onclick="window.open('${fileUrl}', '_blank')">
+                    <i class="bi bi-file-earmark fs-3" style="color: #008069;"></i>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-weight: 500; font-size: 0.9rem; word-break: break-word;">${escapeHtml(fileName)}</div>
+                        <small style="color: #667781; font-size: 0.75rem;">Tap to download</small>
+                    </div>
+                    <i class="bi bi-download" style="color: #008069;"></i>
+                </div>
+            `;
+        } else if (msg.type === 'location' && msg.file_path) {
+            try {
+                const locationData = JSON.parse(msg.file_path);
+                const mapUrl = locationData.url || `https://www.google.com/maps?q=${locationData.latitude},${locationData.longitude}`;
+                const latitude = locationData.latitude;
+                const longitude = locationData.longitude;
+                
+                // Create static map image URL (using Google Maps Static API or OpenStreetMap)
+                const staticMapUrl = `https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/pin-s-l+dc3545(${longitude},${latitude})/${longitude},${latitude},15,0/300x200@2x?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXV4NTFmZmYycXVndHFkZnppem4ifQ.rJcFIG214AriISLbB6B5aw`;
+                // Fallback to OpenStreetMap if Mapbox doesn't work
+                const fallbackMapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${longitude-0.01},${latitude-0.01},${longitude+0.01},${latitude+0.01}&layer=mapnik&marker=${latitude},${longitude}`;
+                
+                mediaContent = `
+                    <div class="mb-2" style="border-radius: 8px; overflow: hidden; max-width: 300px; cursor: pointer; background: white; border: 1px solid #e0e0e0;" onclick="window.open('${mapUrl}', '_blank')">
+                        <div style="width: 100%; height: 150px; background: #e3f2fd; position: relative; overflow: hidden;">
+                            <iframe src="${fallbackMapUrl}" style="width: 100%; height: 100%; border: none; pointer-events: none;"></iframe>
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10;">
+                                <i class="bi bi-geo-alt-fill" style="font-size: 2rem; color: #dc3545; text-shadow: 0 2px 4px rgba(0,0,0,0.3);"></i>
+                            </div>
+                        </div>
+                        <div style="padding: 12px; background: white;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <i class="bi bi-geo-alt-fill" style="color: #008069; font-size: 1.2rem;"></i>
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="font-weight: 500; font-size: 0.9rem; color: #111b21;">Location</div>
+                                    <small style="color: #667781; font-size: 0.75rem;">Tap to open in maps</small>
+                                </div>
+                                <i class="bi bi-arrow-up-right" style="color: #008069;"></i>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } catch (e) {
+                // Fallback if location data is not in JSON format
+                const mapUrl = msg.file_path.startsWith('http') ? msg.file_path : `https://www.google.com/maps?q=${msg.file_path}`;
+                mediaContent = `
+                    <div class="mb-2 d-flex align-items-center gap-2" style="background: rgba(0,0,0,0.05); padding: 12px; border-radius: 8px; cursor: pointer;" onclick="window.open('${mapUrl}', '_blank')">
+                        <i class="bi bi-geo-alt-fill fs-3" style="color: #008069;"></i>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-weight: 500; font-size: 0.9rem; word-break: break-word;">📍 Location</div>
+                            <small style="color: #667781; font-size: 0.75rem;">Tap to open in maps</small>
+                        </div>
+                        <i class="bi bi-arrow-up-right" style="color: #008069;"></i>
+                    </div>
+                `;
+            }
+        } else if (msg.type === 'contact' && msg.file_path) {
+            try {
+                const contactData = JSON.parse(msg.file_path);
+                const contactName = contactData.name || 'Unknown';
+                const contactEmail = contactData.email || '';
+                const contactUserId = contactData.user_id || '';
+                
+                mediaContent = `
+                    <div class="mb-2" style="border-radius: 8px; overflow: hidden; max-width: 300px; cursor: pointer; background: white; border: 1px solid #e0e0e0;" onclick="if(${contactUserId}) { openChatWithUser(${contactUserId}, '${contactName.replace(/'/g, "\\'")}', '${contactEmail.replace(/'/g, "\\'")}', ''); }">
+                        <div style="padding: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div class="rounded-circle bg-white d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                    <span class="fw-bold" style="color: #667eea; font-size: 1.2rem;">${contactName.charAt(0).toUpperCase()}</span>
+                                </div>
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="font-weight: 600; font-size: 1rem; color: white; word-break: break-word;">${escapeHtml(contactName)}</div>
+                                    ${contactEmail ? `<small style="color: rgba(255,255,255,0.9); font-size: 0.85rem;">${escapeHtml(contactEmail)}</small>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div style="padding: 12px; background: white; display: flex; align-items: center; gap: 8px;">
+                            <i class="bi bi-person-vcard-fill" style="color: #008069; font-size: 1.2rem;"></i>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="font-weight: 500; font-size: 0.9rem; color: #111b21;">Contact</div>
+                                <small style="color: #667781; font-size: 0.75rem;">${contactUserId ? 'Tap to open chat' : 'Contact info'}</small>
+                            </div>
+                            <i class="bi bi-arrow-up-right" style="color: #008069;"></i>
+                        </div>
+                    </div>
+                `;
+            } catch (e) {
+                // Fallback if contact data is not in JSON format - show message text
+                mediaContent = `
+                    <div class="mb-2 d-flex align-items-center gap-2" style="background: rgba(0,0,0,0.05); padding: 12px; border-radius: 8px;">
+                        <i class="bi bi-person-vcard-fill fs-3" style="color: #008069;"></i>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-weight: 500; font-size: 0.9rem; word-break: break-word;">👤 Contact</div>
+                            <small style="color: #667781; font-size: 0.75rem;">Contact information</small>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
         return `
             <div class="d-flex ${isSent ? 'justify-content-end' : 'justify-content-start'} mb-2 message-item" data-message-id="${msg.id}">
                 <!-- Selection Checkbox -->
@@ -1920,11 +2428,18 @@ function displayChatMessages(messages, shouldScroll = false) {
                            style="width: 18px; height: 18px; cursor: pointer;">
                 </div>
                 <div class="message-bubble ${isSent ? 'sent' : 'received'}" 
-                     style="max-width: 70%; padding: 8px 12px; border-radius: 8px; ${isSent ? 'background: #dcf8c6; margin-left: auto;' : 'background: white;'}">
-                    <div class="message-text" style="word-wrap: break-word; font-size: 0.9rem;">
-                        ${escapeHtml(msg.message)}
-                    </div>
-                    <div class="d-flex align-items-center justify-content-end mt-1" style="gap: 4px;">
+                     style="max-width: 70%; padding: ${msg.type !== 'text' ? '4px' : '8px 12px'}; border-radius: 8px; ${isSent ? 'background: #dcf8c6; margin-left: auto;' : 'background: white;'}">
+                    ${mediaContent}
+                    ${msg.message && msg.type === 'text' ? `
+                        <div class="message-text" style="word-wrap: break-word; font-size: 0.9rem;">
+                            ${escapeHtml(msg.message)}
+                        </div>
+                    ` : msg.message && msg.type !== 'text' ? `
+                        <div class="message-text mt-2" style="word-wrap: break-word; font-size: 0.85rem; color: #54656f; padding: 0 8px;">
+                            ${escapeHtml(msg.message)}
+                        </div>
+                    ` : ''}
+                    <div class="d-flex align-items-center justify-content-end mt-1" style="gap: 4px; padding: 0 4px;">
                         <span class="message-time" style="font-size: 0.7rem; color: #667781;">
                             ${time}
                         </span>
@@ -1941,10 +2456,263 @@ function displayChatMessages(messages, shouldScroll = false) {
     }
 }
 
-// Send chat message
+// Store selected file for preview
+let selectedFile = null;
+let selectedFileType = null;
+
+// Toggle attachment menu
+function toggleAttachmentMenu(event) {
+    event.stopPropagation();
+    const menu = document.getElementById('attachmentMenu');
+    const emojiPicker = document.getElementById('emojiPickerContainer');
+    
+    if (emojiPicker && !emojiPicker.classList.contains('d-none')) {
+        emojiPicker.style.display = 'none';
+    }
+    
+    if (menu) {
+        if (menu.classList.contains('d-none')) {
+            menu.classList.remove('d-none');
+            setTimeout(() => {
+                document.addEventListener('click', closeAttachmentMenu);
+            }, 100);
+        } else {
+            menu.classList.add('d-none');
+            document.removeEventListener('click', closeAttachmentMenu);
+        }
+    }
+}
+
+// Close attachment menu
+function closeAttachmentMenu(event) {
+    const menu = document.getElementById('attachmentMenu');
+    const btn = document.getElementById('attachmentBtn');
+    
+    if (menu && btn && !menu.contains(event.target) && !btn.contains(event.target)) {
+        menu.classList.add('d-none');
+        document.removeEventListener('click', closeAttachmentMenu);
+    }
+}
+
+// Open file input based on type
+function openFileInput(type) {
+    closeAttachmentMenu({target: null});
+    
+    let inputId = '';
+    switch(type) {
+        case 'document':
+            inputId = 'fileInputDocument';
+            break;
+        case 'camera':
+            inputId = 'fileInputCamera';
+            break;
+        case 'gallery':
+            inputId = 'fileInputGallery';
+            break;
+        case 'audio':
+            inputId = 'fileInputAudio';
+            break;
+        case 'video':
+            inputId = 'fileInputVideo';
+            break;
+        case 'location':
+            showLocationOptions();
+            return;
+        case 'contact':
+            showContactSelector();
+            return;
+        default:
+            return;
+    }
+    
+    const input = document.getElementById(inputId);
+    if (input) {
+        input.click();
+    }
+}
+
+// Compress image for mobile
+function compressImage(file, maxWidth = 1920, maxHeight = 1920, quality = 0.8) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                
+                if (width > height) {
+                    if (width > maxWidth) {
+                        height = (height * maxWidth) / width;
+                        width = maxWidth;
+                    }
+                } else {
+                    if (height > maxHeight) {
+                        width = (width * maxHeight) / height;
+                        height = maxHeight;
+                    }
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                canvas.toBlob(function(blob) {
+                    const compressedFile = new File([blob], file.name, {
+                        type: 'image/jpeg',
+                        lastModified: Date.now()
+                    });
+                    resolve(compressedFile);
+                }, 'image/jpeg', quality);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+// Handle file selection - show preview instead of sending directly
+function handleFileSelect(event, fileType) {
+    const file = event.target.files[0];
+    if (!file || !currentChatUserId) return;
+    
+    const maxSize = fileType === 'video' ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+        alert(`File size is too large. Maximum size: ${fileType === 'video' ? '50MB' : '10MB'}`);
+        event.target.value = '';
+        return;
+    }
+    
+    if (fileType === 'image' && file.size > 2 * 1024 * 1024) {
+        const previewArea = document.getElementById('mediaPreviewArea');
+        const previewContent = document.getElementById('mediaPreviewContent');
+        if (previewArea && previewContent) {
+            previewArea.classList.remove('d-none');
+            previewContent.innerHTML = '<div class="text-center p-3"><div class="spinner-border spinner-border-sm" role="status"></div><div class="mt-2"><small>Compressing image...</small></div></div>';
+        }
+        
+        compressImage(file).then(compressedFile => {
+            selectedFile = compressedFile;
+            selectedFileType = fileType;
+            showMediaPreview(compressedFile, fileType);
+            event.target.value = '';
+        }).catch(error => {
+            console.error('Error compressing image:', error);
+            selectedFile = file;
+            selectedFileType = fileType;
+            showMediaPreview(file, fileType);
+            event.target.value = '';
+        });
+    } else {
+        selectedFile = file;
+        selectedFileType = fileType;
+        showMediaPreview(file, fileType);
+        event.target.value = '';
+    }
+}
+
+// Show media preview in typing area
+function showMediaPreview(file, fileType) {
+    const previewArea = document.getElementById('mediaPreviewArea');
+    const previewContent = document.getElementById('mediaPreviewContent');
+    const captionInput = document.getElementById('mediaCaptionInput');
+    
+    if (!previewArea || !previewContent) return;
+    
+    previewArea.classList.remove('d-none');
+    
+    let previewHTML = '';
+    const fileSize = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+    
+    if (fileType === 'image') {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewHTML = `
+                <div style="max-width: 200px; max-height: 200px; margin: 0 auto; border-radius: 8px; overflow: hidden;">
+                    <img src="${e.target.result}" alt="Preview" style="width: 100%; height: auto; display: block;">
+                </div>
+                <div class="text-center mt-2">
+                    <small style="color: #54656f; font-size: 0.75rem;">${file.name}</small>
+                    <br><small style="color: #8696a0; font-size: 0.7rem;">${fileSize}</small>
+                </div>
+            `;
+            previewContent.innerHTML = previewHTML;
+        };
+        reader.readAsDataURL(file);
+    } else if (fileType === 'video') {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewHTML = `
+                <div style="max-width: 200px; max-height: 200px; margin: 0 auto; border-radius: 8px; overflow: hidden; background: #000;">
+                    <video src="${e.target.result}" style="width: 100%; height: auto; max-height: 200px;" controls></video>
+                </div>
+                <div class="text-center mt-2">
+                    <small style="color: #54656f; font-size: 0.75rem;">${file.name}</small>
+                    <br><small style="color: #8696a0; font-size: 0.7rem;">${fileSize}</small>
+                </div>
+            `;
+            previewContent.innerHTML = previewHTML;
+        };
+        reader.readAsDataURL(file);
+    } else if (fileType === 'audio') {
+        previewHTML = `
+            <div class="d-flex align-items-center gap-3 p-3" style="background: white; border-radius: 8px;">
+                <i class="bi bi-music-note-beamed fs-2" style="color: #008069;"></i>
+                <div style="flex: 1; min-width: 0;">
+                    <div style="font-weight: 500; font-size: 0.9rem; word-break: break-word;">${file.name}</div>
+                    <small style="color: #667781; font-size: 0.75rem;">${fileSize}</small>
+                </div>
+            </div>
+        `;
+        previewContent.innerHTML = previewHTML;
+    } else if (fileType === 'file') {
+        previewHTML = `
+            <div class="d-flex align-items-center gap-3 p-3" style="background: white; border-radius: 8px;">
+                <i class="bi bi-file-earmark fs-2" style="color: #008069;"></i>
+                <div style="flex: 1; min-width: 0;">
+                    <div style="font-weight: 500; font-size: 0.9rem; word-break: break-word;">${file.name}</div>
+                    <small style="color: #667781; font-size: 0.75rem;">${fileSize}</small>
+                </div>
+            </div>
+        `;
+        previewContent.innerHTML = previewHTML;
+    }
+    
+    if (captionInput) {
+        captionInput.value = '';
+    }
+}
+
+// Clear media preview
+function clearMediaPreview() {
+    const previewArea = document.getElementById('mediaPreviewArea');
+    const previewContent = document.getElementById('mediaPreviewContent');
+    const captionInput = document.getElementById('mediaCaptionInput');
+    
+    if (previewArea) previewArea.classList.add('d-none');
+    if (previewContent) previewContent.innerHTML = '';
+    if (captionInput) captionInput.value = '';
+    
+    selectedFile = null;
+    selectedFileType = null;
+}
+
+// Send chat message (text or media)
 function sendChatMessage() {
+    if (!currentChatUserId) return;
+    
+    // Check if there's a media file to send
+    if (selectedFile && selectedFileType) {
+        sendMediaMessage();
+        return;
+    }
+    
+    // Send text message
     const input = document.getElementById('chatMessageInput');
-    if (!input || !input.value.trim() || !currentChatUserId) return;
+    if (!input || !input.value.trim()) return;
     
     const message = input.value.trim();
     input.value = '';
@@ -1965,10 +2733,7 @@ function sendChatMessage() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Move user to top of list (without refresh)
             moveUserToTop(currentChatUserId);
-            
-            // Reload messages to show tick marks - always scroll when sending
             loadChatMessages(currentChatUserId, false);
         } else {
             alert('Failed to send message');
@@ -1980,10 +2745,156 @@ function sendChatMessage() {
     });
 }
 
+// Send media message
+function sendMediaMessage() {
+    if (!selectedFile || !selectedFileType || !currentChatUserId) return;
+    
+    const captionInput = document.getElementById('mediaCaptionInput');
+    const caption = captionInput ? captionInput.value.trim() : '';
+    const input = document.getElementById('chatMessageInput');
+    
+    if (input) {
+        input.disabled = true;
+        input.placeholder = 'Uploading...';
+    }
+    
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    formData.append('receiver_id', currentChatUserId);
+    formData.append('type', selectedFileType);
+    formData.append('message', caption);
+    
+    fetch('{{ route("api.chat.send") }}', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        },
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || 'Upload failed');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            moveUserToTop(currentChatUserId);
+            clearMediaPreview();
+            loadChatMessages(currentChatUserId, true);
+        } else {
+            alert(data.message || 'Failed to send media');
+        }
+    })
+    .catch(error => {
+        console.error('Error sending media:', error);
+        alert(error.message || 'Error sending media. Please try again.');
+    })
+    .finally(() => {
+        if (input) {
+            input.disabled = false;
+            input.placeholder = 'Type a message';
+        }
+    });
+}
+
 // Handle Enter key in chat input
 function handleChatKeyPress(event) {
     if (event.key === 'Enter') {
         sendChatMessage();
+    }
+}
+
+// Emoji picker state
+let emojiPickerVisible = false;
+const commonEmojis = [
+    '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣',
+    '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰',
+    '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜',
+    '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏',
+    '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣',
+    '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠',
+    '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨',
+    '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥',
+    '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧',
+    '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐',
+    '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑',
+    '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻',
+    '💀', '☠️', '👽', '👾', '🤖', '🎃', '😺', '😸',
+    '😹', '😻', '😼', '😽', '🙀', '😿', '😾', '👋',
+    '🤚', '🖐', '✋', '🖖', '👌', '🤏', '✌️', '🤞',
+    '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇',
+    '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏',
+    '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💪', '🦾',
+    '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🦷',
+    '🦴', '👀', '👁️', '👅', '👄', '💋', '💘', '💝',
+    '💖', '💗', '💓', '💞', '💕', '💟', '❣️', '💔',
+    '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍',
+    '🤎', '💯', '💢', '💥', '💫', '💦', '💨', '🕳️',
+    '💣', '💬', '👁️‍🗨️', '🗨️', '🗯️', '💭', '💤'
+];
+
+// Initialize emoji picker
+function initEmojiPicker() {
+    const emojiPicker = document.getElementById('emojiPicker');
+    if (!emojiPicker) return;
+    
+    emojiPicker.innerHTML = commonEmojis.map(emoji => `
+        <button type="button" class="btn btn-sm p-2" 
+                onclick="insertEmoji('${emoji}')"
+                style="font-size: 24px; border: none; background: transparent; cursor: pointer; transition: transform 0.1s;"
+                onmouseover="this.style.transform='scale(1.2)'"
+                onmouseout="this.style.transform='scale(1)'">
+            ${emoji}
+        </button>
+    `).join('');
+}
+
+// Toggle emoji picker
+function toggleEmojiPicker(event) {
+    event.stopPropagation();
+    const container = document.getElementById('emojiPickerContainer');
+    if (!container) return;
+    
+    emojiPickerVisible = !emojiPickerVisible;
+    container.style.display = emojiPickerVisible ? 'block' : 'none';
+    
+    if (emojiPickerVisible) {
+        // Close picker when clicking outside
+        setTimeout(() => {
+            document.addEventListener('click', closeEmojiPickerOnOutsideClick);
+        }, 100);
+    }
+}
+
+// Close emoji picker when clicking outside
+function closeEmojiPickerOnOutsideClick(event) {
+    const container = document.getElementById('emojiPickerContainer');
+    const button = document.getElementById('emojiPickerBtn');
+    
+    if (container && button && 
+        !container.contains(event.target) && 
+        !button.contains(event.target)) {
+        container.style.display = 'none';
+        emojiPickerVisible = false;
+        document.removeEventListener('click', closeEmojiPickerOnOutsideClick);
+    }
+}
+
+// Insert emoji into input
+function insertEmoji(emoji) {
+    const input = document.getElementById('chatMessageInput');
+    if (input) {
+        const cursorPos = input.selectionStart || input.value.length;
+        const textBefore = input.value.substring(0, cursorPos);
+        const textAfter = input.value.substring(cursorPos);
+        input.value = textBefore + emoji + textAfter;
+        input.focus();
+        // Set cursor position after inserted emoji
+        input.setSelectionRange(cursorPos + emoji.length, cursorPos + emoji.length);
     }
 }
 
@@ -2000,6 +2911,851 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Open media viewer (for images) - Mobile optimized
+function openMediaViewer(url, type) {
+    if (type === 'image') {
+        // Prevent body scroll when modal is open
+        document.body.style.overflow = 'hidden';
+        
+        // Create modal for image viewer
+        const modal = document.createElement('div');
+        modal.id = 'mediaViewerModal';
+        modal.className = 'modal fade';
+        modal.setAttribute('tabindex', '-1');
+        modal.setAttribute('data-bs-backdrop', 'static');
+        modal.setAttribute('data-bs-keyboard', 'true');
+        modal.style.zIndex = '9999';
+        
+        // Mobile-friendly modal
+        const isMobile = window.innerWidth <= 768;
+        const modalSize = isMobile ? '100vw' : '95vw';
+        const buttonSize = isMobile ? '45px' : '40px';
+        const buttonTop = isMobile ? '10px' : '15px';
+        const buttonRight = isMobile ? '10px' : '15px';
+        
+        modal.innerHTML = `
+            <div class="modal-dialog modal-dialog-centered" style="max-width: ${modalSize}; width: ${modalSize}; margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center;">
+                <div class="modal-content" style="background: rgba(0,0,0,0.95); border: none; position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                    <div class="modal-body p-0 text-center" style="position: relative; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; padding: 0;">
+                        <div style="position: relative; display: inline-block; max-width: 100%; max-height: ${isMobile ? '100vh' : '90vh'};">
+                            <button type="button" 
+                                    id="closeMediaViewerBtn"
+                                    style="position: absolute; top: ${buttonTop}; right: ${buttonRight}; z-index: 10000; 
+                                           background: #dc3545 !important; color: white !important; border: 3px solid white !important; 
+                                           border-radius: 50% !important; width: ${buttonSize} !important; height: ${buttonSize} !important; 
+                                           padding: 0 !important; display: flex !important; align-items: center !important; justify-content: center !important; 
+                                           cursor: pointer !important; box-shadow: 0 4px 12px rgba(0,0,0,0.7) !important;
+                                           font-weight: bold !important; font-size: ${isMobile ? '1.4rem' : '1.2rem'} !important; 
+                                           transition: all 0.2s; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+                                           margin: 0 !important; pointer-events: auto !important;"
+                                    aria-label="Close">
+                                <i class="bi bi-x-lg" style="line-height: 1; color: white !important; pointer-events: none;"></i>
+                            </button>
+                            <img src="${url}" alt="Image" 
+                                 id="viewerImage"
+                                 style="max-width: 100%; max-height: ${isMobile ? '100vh' : '90vh'}; width: auto; height: auto; 
+                                        object-fit: contain; display: block; margin: 0 auto;
+                                        touch-action: pan-x pan-y; -webkit-user-select: none; user-select: none;
+                                        -webkit-touch-callout: none;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Add event listener to close button (mobile-friendly)
+        const closeBtn = modal.querySelector('#closeMediaViewerBtn');
+        if (closeBtn) {
+            // Handle both click and touch events for mobile
+            const handleClose = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                // Reset visual state
+                closeBtn.style.transform = 'scale(1)';
+                closeBtn.style.background = '#dc3545';
+                closeMediaViewer();
+            };
+            
+            closeBtn.addEventListener('click', handleClose, { passive: false });
+            closeBtn.addEventListener('touchend', handleClose, { passive: false });
+            
+            // Touch feedback
+            closeBtn.addEventListener('touchstart', function(e) {
+                this.style.transform = 'scale(0.9)';
+                this.style.background = '#c82333';
+            }, { passive: true });
+            
+            // Desktop hover effects
+            if (!isMobile) {
+                closeBtn.addEventListener('mouseover', function() {
+                    this.style.transform = 'scale(1.1)';
+                    this.style.background = '#c82333';
+                });
+                closeBtn.addEventListener('mouseout', function() {
+                    this.style.transform = 'scale(1)';
+                    this.style.background = '#dc3545';
+                });
+            }
+        }
+        
+        // Show modal immediately for mobile
+        if (isMobile) {
+            modal.style.display = 'block';
+            modal.classList.add('show');
+            modal.setAttribute('aria-hidden', 'false');
+            modal.setAttribute('aria-modal', 'true');
+            const backdrop = document.createElement('div');
+            backdrop.className = 'modal-backdrop fade show';
+            backdrop.style.zIndex = '9998';
+            document.body.appendChild(backdrop);
+            modal.backdrop = backdrop;
+        } else {
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+        }
+        
+        // Close on ESC key (desktop)
+        const escHandler = function(e) {
+            if (e.key === 'Escape') {
+                closeMediaViewer();
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+        modal.escHandler = escHandler;
+        
+        // Close on backdrop tap/click (mobile friendly)
+        modal.addEventListener('click', function(e) {
+            // Don't close if clicking on close button or image
+            if (e.target.id === 'closeMediaViewerBtn' || e.target.closest('#closeMediaViewerBtn') || 
+                e.target.id === 'viewerImage' || e.target.closest('#viewerImage')) {
+                return;
+            }
+            // Close if clicking on backdrop or modal body
+            if (e.target === modal || e.target.classList.contains('modal-dialog') || 
+                e.target.classList.contains('modal-body')) {
+                closeMediaViewer();
+            }
+        });
+        
+        // Prevent image drag on mobile
+        const img = modal.querySelector('#viewerImage');
+        if (img) {
+            img.addEventListener('dragstart', function(e) {
+                e.preventDefault();
+            });
+        }
+        
+        // Remove modal from DOM after closing
+        modal.addEventListener('hidden.bs.modal', function() {
+            cleanupMediaViewer();
+        });
+        
+        // Store cleanup function
+        modal.cleanup = cleanupMediaViewer;
+    }
+}
+
+// Close media viewer
+function closeMediaViewer() {
+    const modal = document.getElementById('mediaViewerModal');
+    if (modal) {
+        const isMobile = window.innerWidth <= 768;
+        
+        if (isMobile) {
+            // Mobile: manual cleanup
+            modal.style.display = 'none';
+            modal.classList.remove('show');
+            if (modal.backdrop) {
+                modal.backdrop.remove();
+            }
+            cleanupMediaViewer();
+        } else {
+            // Desktop: use Bootstrap modal
+            const bsModal = bootstrap.Modal.getInstance(modal);
+            if (bsModal) {
+                bsModal.hide();
+            } else {
+                cleanupMediaViewer();
+            }
+        }
+    }
+}
+
+// Cleanup media viewer
+function cleanupMediaViewer() {
+    const modal = document.getElementById('mediaViewerModal');
+    if (modal) {
+        // Remove event listeners
+        if (modal.escHandler) {
+            document.removeEventListener('keydown', modal.escHandler);
+        }
+        
+        // Remove backdrop
+        if (modal.backdrop) {
+            modal.backdrop.remove();
+        }
+        
+        // Remove modal
+        if (document.body.contains(modal)) {
+            document.body.removeChild(modal);
+        }
+        
+        // Restore body scroll
+        document.body.style.overflow = '';
+    }
+}
+
+// Close location options modal
+function closeLocationModal() {
+    const modalElement = document.getElementById('locationOptionsModal');
+    if (!modalElement) return;
+    
+    const isMobile = window.innerWidth <= 768;
+    
+    if (isMobile) {
+        // Mobile: Manual close
+        modalElement.style.display = 'none';
+        modalElement.classList.remove('show');
+        modalElement.setAttribute('aria-hidden', 'true');
+        modalElement.setAttribute('aria-modal', 'false');
+        
+        // Remove backdrop
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.remove();
+        }
+        
+        // Restore body scroll
+        document.body.style.overflow = '';
+    } else {
+        // Desktop: Use Bootstrap modal
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        if (modal) {
+            modal.hide();
+        } else {
+            modalElement.style.display = 'none';
+            modalElement.classList.remove('show');
+        }
+    }
+}
+
+// Show location options modal
+function showLocationOptions() {
+    if (!currentChatUserId) {
+        alert('Please select a user to share location');
+        return;
+    }
+    
+    const modalElement = document.getElementById('locationOptionsModal');
+    if (!modalElement) return;
+    
+    // Ensure modal is visible on mobile
+    const isMobile = window.innerWidth <= 768;
+    
+    if (isMobile) {
+        // Mobile: Show modal directly
+        modalElement.style.display = 'block';
+        modalElement.classList.add('show');
+        modalElement.setAttribute('aria-hidden', 'false');
+        modalElement.setAttribute('aria-modal', 'true');
+        
+        // Create backdrop
+        let backdrop = document.querySelector('.modal-backdrop');
+        if (!backdrop) {
+            backdrop = document.createElement('div');
+            backdrop.className = 'modal-backdrop fade show';
+            backdrop.style.zIndex = '9999';
+            document.body.appendChild(backdrop);
+        }
+        
+        // Prevent body scroll
+        document.body.style.overflow = 'hidden';
+    } else {
+        // Desktop: Use Bootstrap modal
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+    }
+    
+    // Add event listener to close button (mobile-friendly)
+    const closeBtn = document.getElementById('closeLocationModalBtn');
+    if (closeBtn) {
+        // Remove existing listeners to avoid duplicates
+        const newCloseBtn = closeBtn.cloneNode(true);
+        closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+        
+        // Handle both click and touch events for mobile
+        const handleClose = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeLocationModal();
+        };
+        
+        newCloseBtn.addEventListener('click', handleClose, { passive: false });
+        newCloseBtn.addEventListener('touchend', handleClose, { passive: false });
+    }
+}
+
+// Close contact selector modal
+function closeContactModal() {
+    const modalElement = document.getElementById('contactSelectorModal');
+    if (!modalElement) return;
+    
+    const isMobile = window.innerWidth <= 768;
+    
+    if (isMobile) {
+        // Mobile: Manual close
+        modalElement.style.display = 'none';
+        modalElement.classList.remove('show');
+        modalElement.setAttribute('aria-hidden', 'true');
+        modalElement.setAttribute('aria-modal', 'false');
+        
+        // Remove backdrop
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.remove();
+        }
+        
+        // Restore body scroll
+        document.body.style.overflow = '';
+    } else {
+        // Desktop: Use Bootstrap modal
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        if (modal) {
+            modal.hide();
+        } else {
+            modalElement.style.display = 'none';
+            modalElement.classList.remove('show');
+        }
+    }
+}
+
+// Show contact selector modal
+function showContactSelector() {
+    if (!currentChatUserId) {
+        alert('Please select a user to share contact');
+        return;
+    }
+    
+    const modalElement = document.getElementById('contactSelectorModal');
+    if (!modalElement) return;
+    
+    const contactList = document.getElementById('contactSelectorList');
+    if (!contactList) return;
+    
+    // Get all users from the users list
+    const userCards = document.querySelectorAll('.user-card');
+    if (userCards.length === 0) {
+        alert('No contacts available to share');
+        return;
+    }
+    
+    // Build contact list HTML
+    let contactsHTML = '';
+    userCards.forEach(function(card) {
+        const userId = card.getAttribute('data-user-id');
+        const userName = card.querySelector('h6')?.textContent?.trim() || '';
+        const userEmail = card.querySelector('small')?.textContent?.replace(/^[^\w@]+/, '').trim() || '';
+        
+        if (!userId || !userName) return;
+        
+        // Get profile picture or first letter
+        const profileImg = card.querySelector('img');
+        const profilePic = profileImg ? profileImg.src : '';
+        const firstLetter = userName.charAt(0).toUpperCase();
+        
+        contactsHTML += `
+            <div class="list-group-item list-group-item-action p-3" 
+                 onclick="shareContact(${userId}, '${userName.replace(/'/g, "\\'")}', '${userEmail.replace(/'/g, "\\'")}')"
+                 style="cursor: pointer; border: none; border-bottom: 1px solid #e9edef;">
+                <div class="d-flex align-items-center">
+                    ${profilePic ? 
+                        `<img src="${profilePic}" alt="${userName}" class="rounded-circle me-3" style="width: 45px; height: 45px; object-fit: cover;">` :
+                        `<div class="rounded-circle bg-primary d-flex align-items-center justify-content-center me-3" style="width: 45px; height: 45px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;">
+                            <span class="text-white fw-bold" style="font-size: 1.1rem;">${firstLetter}</span>
+                        </div>`
+                    }
+                    <div class="flex-grow-1">
+                        <h6 class="mb-0" style="color: #111b21; font-weight: 500;">${userName}</h6>
+                        <small class="text-muted">${userEmail}</small>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </div>
+            </div>
+        `;
+    });
+    
+    contactList.innerHTML = contactsHTML;
+    
+    // Ensure modal is visible on mobile
+    const isMobile = window.innerWidth <= 768;
+    
+    if (isMobile) {
+        // Mobile: Show modal directly
+        modalElement.style.display = 'block';
+        modalElement.classList.add('show');
+        modalElement.setAttribute('aria-hidden', 'false');
+        modalElement.setAttribute('aria-modal', 'true');
+        
+        // Create backdrop
+        let backdrop = document.querySelector('.modal-backdrop');
+        if (!backdrop) {
+            backdrop = document.createElement('div');
+            backdrop.className = 'modal-backdrop fade show';
+            backdrop.style.zIndex = '9999';
+            document.body.appendChild(backdrop);
+        }
+        
+        // Prevent body scroll
+        document.body.style.overflow = 'hidden';
+    } else {
+        // Desktop: Use Bootstrap modal
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+    }
+    
+    // Add event listener to close button (mobile-friendly)
+    const closeBtn = document.getElementById('closeContactModalBtn');
+    if (closeBtn) {
+        // Remove existing listeners to avoid duplicates
+        const newCloseBtn = closeBtn.cloneNode(true);
+        closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+        
+        // Handle both click and touch events for mobile
+        const handleClose = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeContactModal();
+        };
+        
+        newCloseBtn.addEventListener('click', handleClose, { passive: false });
+        newCloseBtn.addEventListener('touchend', handleClose, { passive: false });
+    }
+}
+
+// Share contact
+function shareContact(contactUserId, contactName, contactEmail) {
+    // Close modal
+    closeContactModal();
+    
+    if (!currentChatUserId) {
+        alert('Please select a user to share contact');
+        return;
+    }
+    
+    // Create contact message (WhatsApp style)
+    const contactMessage = `👤 Contact\nName: ${contactName}\nEmail: ${contactEmail}`;
+    
+    // Send contact
+    fetch('{{ route("api.chat.send") }}', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            receiver_id: currentChatUserId,
+            message: contactMessage,
+            type: 'contact',
+            contact_user_id: contactUserId,
+            contact_name: contactName,
+            contact_email: contactEmail
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            moveUserToTop(currentChatUserId);
+            loadChatMessages(currentChatUserId, false);
+            
+            // Clear input
+            const input = document.getElementById('chatMessageInput');
+            if (input) {
+                input.value = '';
+            }
+        } else {
+            alert(data.message || 'Failed to share contact');
+        }
+    })
+    .catch(error => {
+        console.error('Error sharing contact:', error);
+        alert('Error sharing contact. Please try again.');
+    });
+}
+
+// Share current location
+let isCurrentLocationSending = false; // Flag to prevent duplicate sends
+
+function shareCurrentLocation() {
+    // Prevent multiple simultaneous calls
+    if (isCurrentLocationSending) {
+        return;
+    }
+    
+    // Close modal
+    closeLocationModal();
+    
+    if (!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser');
+        return;
+    }
+    
+    isCurrentLocationSending = true;
+    
+    // Show loading
+    const input = document.getElementById('chatMessageInput');
+    if (input) {
+        input.disabled = true;
+        input.placeholder = 'Getting location...';
+    }
+    
+    navigator.geolocation.getCurrentPosition(
+        function(position) {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+            
+            // Create location message
+            const locationMessage = `📍 Location\nLatitude: ${latitude.toFixed(6)}\nLongitude: ${longitude.toFixed(6)}`;
+            const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+            
+            // Send location
+            fetch('{{ route("api.chat.send") }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    receiver_id: currentChatUserId,
+                    message: locationMessage,
+                    type: 'location',
+                    latitude: latitude,
+                    longitude: longitude,
+                    location_url: googleMapsUrl
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    moveUserToTop(currentChatUserId);
+                    loadChatMessages(currentChatUserId, false);
+                } else {
+                    alert(data.message || 'Failed to send location');
+                }
+            })
+            .catch(error => {
+                console.error('Error sending location:', error);
+                alert('Error sending location. Please try again.');
+            })
+            .finally(() => {
+                isCurrentLocationSending = false;
+                if (input) {
+                    input.disabled = false;
+                    input.placeholder = 'Type a message';
+                }
+            });
+        },
+        function(error) {
+            console.error('Geolocation error:', error);
+            let errorMessage = 'Failed to get location. ';
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    errorMessage += 'Location access denied by user.';
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    errorMessage += 'Location information unavailable.';
+                    break;
+                case error.TIMEOUT:
+                    errorMessage += 'Location request timed out.';
+                    break;
+                default:
+                    errorMessage += 'Unknown error occurred.';
+                    break;
+            }
+            alert(errorMessage);
+            
+            isCurrentLocationSending = false;
+            if (input) {
+                input.disabled = false;
+                input.placeholder = 'Type a message';
+            }
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        }
+    );
+}
+
+// Share live location (real-time location sharing)
+let liveLocationInterval = null;
+let liveLocationWatchId = null;
+let liveLocationTimeout = null;
+let isLocationSending = false; // Flag to prevent duplicate sends
+let lastLocationSent = null; // Track last sent location
+let liveLocationStartTime = null; // Track when live location started
+let liveLocationDuration = null; // Track duration in milliseconds
+
+function shareLiveLocation() {
+    // Prevent multiple simultaneous calls
+    if (liveLocationWatchId !== null) {
+        alert('Live location is already being shared. Please stop it first.');
+        return;
+    }
+    
+    // Close modal
+    closeLocationModal();
+    
+    if (!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser');
+        return;
+    }
+    
+    // Ask for duration
+    const duration = prompt('Share live location for how many minutes? (1-60)', '15');
+    if (!duration || isNaN(duration) || duration < 1 || duration > 60) {
+        return;
+    }
+    
+    const durationMinutes = parseInt(duration);
+    const durationMs = durationMinutes * 60 * 1000;
+    
+    // Store start time and duration
+    liveLocationStartTime = Date.now();
+    liveLocationDuration = durationMs;
+    
+    // Show loading
+    const input = document.getElementById('chatMessageInput');
+    if (input) {
+        input.disabled = true;
+        input.placeholder = 'Starting live location...';
+    }
+    
+    let locationCount = 0;
+    let currentPosition = null;
+    let hasSentFirstLocation = false;
+    let lastSendTime = 0; // Track last send time to prevent rapid sends
+    const MIN_SEND_INTERVAL = 25000; // Minimum 25 seconds between sends (slightly less than 30s interval)
+    
+    // Function to check if time has expired
+    const isTimeExpired = function() {
+        if (!liveLocationStartTime || !liveLocationDuration) {
+            return false;
+        }
+        const elapsed = Date.now() - liveLocationStartTime;
+        return elapsed >= liveLocationDuration;
+    };
+    
+    // Function to send location
+    const sendLocationUpdate = function() {
+        // Check if time has expired
+        if (isTimeExpired()) {
+            stopLiveLocation();
+            if (input) {
+                input.disabled = false;
+                input.placeholder = 'Type a message';
+            }
+            return;
+        }
+        
+        if (!currentPosition || isLocationSending) {
+            return;
+        }
+        
+        // Prevent rapid sends - check minimum interval
+        const now = Date.now();
+        if (now - lastSendTime < MIN_SEND_INTERVAL && locationCount > 0) {
+            return;
+        }
+        
+        const latitude = currentPosition.coords.latitude;
+        const longitude = currentPosition.coords.longitude;
+        
+        // Prevent duplicate sends with same coordinates (within 1 second)
+        if (lastLocationSent && 
+            Math.abs(lastLocationSent.latitude - latitude) < 0.000001 && 
+            Math.abs(lastLocationSent.longitude - longitude) < 0.000001 &&
+            (now - lastSendTime) < 1000) {
+            return;
+        }
+        
+        locationCount++;
+        lastSendTime = now;
+        
+        // Calculate remaining time
+        const elapsed = Date.now() - liveLocationStartTime;
+        const remaining = Math.max(0, liveLocationDuration - elapsed);
+        const remainingMinutes = Math.ceil(remaining / 60000);
+        
+        // Create location message
+        const locationMessage = `📍 Live Location (${remainingMinutes} min)\nLatitude: ${latitude.toFixed(6)}\nLongitude: ${longitude.toFixed(6)}`;
+        const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+        
+        isLocationSending = true;
+        
+        // Send location update
+        fetch('{{ route("api.chat.send") }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                receiver_id: currentChatUserId,
+                message: locationMessage,
+                type: 'location',
+                latitude: latitude,
+                longitude: longitude,
+                location_url: googleMapsUrl,
+                is_live: true
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            isLocationSending = false;
+            if (data.success) {
+                if (!hasSentFirstLocation) {
+                    // First location sent - mark immediately to prevent duplicates
+                    hasSentFirstLocation = true;
+                    firstLocationSendInitiated = false; // Reset flag
+                    moveUserToTop(currentChatUserId);
+                    // Don't reload messages immediately to prevent duplicate display
+                    setTimeout(() => {
+                        loadChatMessages(currentChatUserId, false);
+                    }, 1000);
+                }
+                lastLocationSent = { latitude, longitude };
+            } else {
+                // Reset flag if send failed
+                if (!hasSentFirstLocation) {
+                    firstLocationSendInitiated = false;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error sending live location:', error);
+            isLocationSending = false;
+            // Reset flag if send failed
+            if (!hasSentFirstLocation) {
+                firstLocationSendInitiated = false;
+            }
+        });
+    };
+    
+    // Watch position for live updates (only to get current position, not to send)
+    let watchPositionFirstCall = true; // Track if this is the first call
+    let firstLocationSendInitiated = false; // Track if first send has been initiated
+    liveLocationWatchId = navigator.geolocation.watchPosition(
+        function(position) {
+            // Check if time expired
+            if (isTimeExpired()) {
+                stopLiveLocation();
+                return;
+            }
+            
+            // Store current position but don't send immediately
+            currentPosition = position;
+            
+            // Send first location immediately (only once, on first position update)
+            // Use multiple flags to prevent race conditions
+            if (watchPositionFirstCall && !hasSentFirstLocation && !isLocationSending && !firstLocationSendInitiated) {
+                watchPositionFirstCall = false;
+                firstLocationSendInitiated = true; // Set immediately to prevent duplicate calls
+                // Use setTimeout to ensure flag is set before async operation
+                setTimeout(() => {
+                    sendLocationUpdate();
+                }, 100);
+            }
+        },
+        function(error) {
+            console.error('Geolocation error:', error);
+            stopLiveLocation();
+            alert('Failed to share live location. Please try again.');
+            if (input) {
+                input.disabled = false;
+                input.placeholder = 'Type a message';
+            }
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0
+        }
+    );
+    
+    // Update location every 30 seconds (controlled sending)
+    liveLocationInterval = setInterval(() => {
+        // Check if time expired before sending
+        if (isTimeExpired()) {
+            stopLiveLocation();
+            if (input) {
+                input.disabled = false;
+                input.placeholder = 'Type a message';
+            }
+            return;
+        }
+        
+        // Only send if:
+        // 1. We have a position
+        // 2. Not currently sending
+        // 3. First location has been sent
+        // 4. Enough time has passed since last send
+        const now = Date.now();
+        if (currentPosition && !isLocationSending && hasSentFirstLocation && (now - lastSendTime >= MIN_SEND_INTERVAL)) {
+            sendLocationUpdate();
+        }
+    }, 30000);
+    
+    // Stop after duration (backup timeout)
+    liveLocationTimeout = setTimeout(() => {
+        stopLiveLocation();
+        if (input) {
+            input.disabled = false;
+            input.placeholder = 'Type a message';
+        }
+    }, durationMs);
+    
+    if (input) {
+        input.disabled = false;
+        input.placeholder = `Sharing live location (${durationMinutes} min)...`;
+    }
+}
+
+// Stop live location sharing
+function stopLiveLocation() {
+    if (liveLocationWatchId !== null) {
+        navigator.geolocation.clearWatch(liveLocationWatchId);
+        liveLocationWatchId = null;
+    }
+    
+    if (liveLocationInterval) {
+        clearInterval(liveLocationInterval);
+        liveLocationInterval = null;
+    }
+    
+    if (liveLocationTimeout) {
+        clearTimeout(liveLocationTimeout);
+        liveLocationTimeout = null;
+    }
+    
+    // Reset all flags and variables
+    isLocationSending = false;
+    lastLocationSent = null;
+    liveLocationStartTime = null;
+    liveLocationDuration = null;
+    
+    const input = document.getElementById('chatMessageInput');
+    if (input) {
+        input.disabled = false;
+        input.placeholder = 'Type a message';
+    }
 }
 
 // Initiate video call from chat
@@ -2221,6 +3977,8 @@ window.addEventListener('beforeunload', function() {
     if (chatMessagesInterval) {
         clearInterval(chatMessagesInterval);
     }
+    // Stop live location if running
+    stopLiveLocation();
     // Stop camera if running
     if (cameraStream) {
         cameraStream.getTracks().forEach(track => track.stop());

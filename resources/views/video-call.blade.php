@@ -430,8 +430,9 @@ async function init() {
             }
         }
         
-        // For demo: simulate receiving remote stream
-        simulateRemoteConnection();
+        // Check call status before starting connection
+        // Only start connection if call is accepted (for receiver) or if user is caller
+        checkCallStatusBeforeConnect();
         
     } catch (error) {
         console.error('Error accessing media devices:', error);
@@ -578,7 +579,10 @@ function createPeerConnection() {
                 remoteVideo.srcObject = event.streams[0];
                 remoteVideo.play().catch(e => console.error('Remote video play error:', e));
                 if (callStatus) callStatus.textContent = 'In Call';
-                // Timer only for audio call, not video call
+                // Start timer when call is connected
+                if (!isCallActive || !callTimerInterval) {
+                    setTimeout(() => startCallTimer(), 500);
+                }
             }
         };
         
@@ -615,12 +619,15 @@ function createPeerConnection() {
                 if (callStatus) {
                     if (peerConnection.iceConnectionState === 'connected' || peerConnection.iceConnectionState === 'completed') {
                         callStatus.textContent = 'Connected';
-                        // Timer only for audio call, not video call
+                        // Start timer when connection is established
+                        if (!isCallActive || !callTimerInterval) {
+                            setTimeout(() => startCallTimer(), 500);
+                        }
                     } else if (peerConnection.iceConnectionState === 'checking') {
                         callStatus.textContent = 'Connecting...';
                     } else if (peerConnection.iceConnectionState === 'failed') {
                         callStatus.textContent = 'Connection Failed';
-                        // Timer only for audio call, not video call
+                        stopCallTimer();
                     }
                 }
             }
@@ -830,6 +837,52 @@ async function checkIceCandidates() {
         }
     } catch (error) {
         console.error('Error checking ICE candidates:', error);
+    }
+}
+
+// Check call status before connecting
+async function checkCallStatusBeforeConnect() {
+    if (!roomId) {
+        console.log('No room ID, starting connection anyway');
+        simulateRemoteConnection();
+        return;
+    }
+    
+    try {
+        const response = await fetch('{{ route("api.call.status") }}?room_id=' + roomId, {
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        console.log('Call Status Check:', {
+            status: data.status,
+            other_user_ready: data.other_user_ready,
+            roomId: roomId
+        });
+        
+        // Only start connection if:
+        // 1. Call is accepted (status === 'accepted')
+        // 2. Or if other user is ready (for caller)
+        // 3. Or if status is not 'pending' (call already in progress)
+        if (data.status === 'accepted' || data.other_user_ready || data.status !== 'pending') {
+            simulateRemoteConnection();
+        } else {
+            // Call is pending - wait for acceptance
+            if (callStatus) callStatus.textContent = 'Waiting for call acceptance...';
+            console.log('Call is pending, waiting for acceptance');
+            
+            // Check again after 2 seconds
+            setTimeout(checkCallStatusBeforeConnect, 2000);
+        }
+    } catch (error) {
+        console.error('Error checking call status:', error);
+        // If error, start connection anyway (fallback)
+        simulateRemoteConnection();
     }
 }
 
@@ -1198,16 +1251,74 @@ function startCallStatusCheck() {
     }, 2000); // Check every 2 seconds
 }
 
-// Start call timer - Disabled for video call, only for audio call
+// Start call timer
 function startCallTimer() {
-    // Timer only for audio call, not video call
-    return;
+    if (isCallActive && callTimerInterval) return; // Already started
+    
+    isCallActive = true;
+    isCallInProgress = true; // Mark call as in progress
+    if (window.setRefreshBlocked) {
+        window.setRefreshBlocked(true); // Block refresh
+    }
+    callStartTime = Date.now();
+    
+    // Show timer
+    const callTimer = document.getElementById('callTimer');
+    const callTimerText = document.getElementById('callTimerText');
+    
+    if (callTimer) {
+        callTimer.style.display = 'block';
+    }
+    
+    if (callTimerInterval) {
+        clearInterval(callTimerInterval);
+    }
+    
+    // Update timer every second
+    callTimerInterval = setInterval(() => {
+        if (callStartTime) {
+            const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+            const hours = Math.floor(elapsed / 3600);
+            const minutes = Math.floor((elapsed % 3600) / 60);
+            const seconds = elapsed % 60;
+            
+            let timeString;
+            if (hours > 0) {
+                timeString = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            } else {
+                timeString = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+            
+            if (callTimerText) {
+                callTimerText.textContent = timeString;
+            }
+        }
+    }, 1000);
 }
 
-// Stop call timer - Disabled for video call, only for audio call
+// Stop call timer
 function stopCallTimer() {
-    // Timer only for audio call, not video call
-    return;
+    isCallActive = false;
+    isCallInProgress = false; // Mark call as ended
+    if (window.setRefreshBlocked) {
+        window.setRefreshBlocked(false); // Allow refresh
+    }
+    callStartTime = null;
+    
+    if (callTimerInterval) {
+        clearInterval(callTimerInterval);
+        callTimerInterval = null;
+    }
+    
+    const callTimer = document.getElementById('callTimer');
+    if (callTimer) {
+        callTimer.style.display = 'none';
+    }
+    
+    const callTimerText = document.getElementById('callTimerText');
+    if (callStartTime && callTimerText) {
+        callTimerText.textContent = '00:00';
+    }
 }
 
 // Show call disconnected message

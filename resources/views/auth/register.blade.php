@@ -100,12 +100,9 @@
 
                         <!-- Social Login -->
                         <div class="d-grid gap-2">
-                            <button type="button" class="btn btn-outline-secondary rounded-3 py-2">
+                            <a href="{{ route('auth.google') }}" class="btn btn-outline-secondary rounded-3 py-2 text-decoration-none">
                                 <i class="bi bi-google me-2"></i> Sign up with Google
-                            </button>
-                            <button type="button" class="btn btn-outline-dark rounded-3 py-2">
-                                <i class="bi bi-apple me-2"></i> Sign up with Apple
-                            </button>
+                            </a>
                         </div>
 
                         <!-- Login Link -->

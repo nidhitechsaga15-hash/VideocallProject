@@ -119,8 +119,10 @@
                     {{-- GROUP CALL --}}
                     <div class="call-item border-bottom bg-white" 
                          data-call-id="{{ $call['id'] }}"
-                         style="transition: background 0.2s; margin-bottom: 0;"
-                         onclick="joinGroupCall('{{ $call['room_id'] }}', '{{ $call['type'] }}')">
+                         data-room-id="{{ $call['room_id'] }}"
+                         data-call-type="{{ $call['type'] }}"
+                         data-is-active="{{ $call['is_active'] ?? false ? 'true' : 'false' }}"
+                         style="transition: background 0.2s; margin-bottom: 0;">
                         <div class="d-flex align-items-center">
                             <!-- Selection Checkbox -->
                             <div class="flex-shrink-0 me-3 d-none selection-checkbox-container" style="width: 24px;">
@@ -130,8 +132,9 @@
                                        style="width: 20px; height: 20px; cursor: pointer;">
                             </div>
                             
-                            <!-- Group Profile Picture (Composite) -->
-                            <div class="flex-shrink-0" style="margin-right: 12px; position: relative; width: 48px; height: 48px;">
+                            <!-- Group Profile Picture (Composite) - Click to show details -->
+                            <div class="flex-shrink-0" style="margin-right: 12px; position: relative; width: 48px; height: 48px; cursor: pointer;" 
+                                 onclick="event.stopPropagation(); showGroupCallDetails('{{ $call['room_id'] }}', '{{ $call['type'] }}')">
                                 @php
                                     $participants = $call['participants'] ?? collect();
                                     $firstTwo = $participants->take(2);
@@ -181,8 +184,9 @@
                                 @endif
                             </div>
 
-                            <!-- Group Call Info -->
-                            <div class="flex-grow-1 min-w-0" style="padding-right: 12px;">
+                            <!-- Group Call Info - Click to show details -->
+                            <div class="flex-grow-1 min-w-0" style="padding-right: 12px; cursor: pointer;" 
+                                 onclick="event.stopPropagation(); showGroupCallDetails('{{ $call['room_id'] }}', '{{ $call['type'] }}')">
                                 <div class="call-name text-truncate">{{ $call['display_name'] ?? 'Group Call' }}</div>
                                 <div class="call-details">
                                     @if($call['is_active'] ?? false)
@@ -199,13 +203,14 @@
                                 </div>
                             </div>
                             
-                            <div class="d-flex align-items-center gap-3 flex-shrink-0">
+                            <div class="d-flex align-items-center gap-3 flex-shrink-0" style="cursor: pointer;" 
+                                 onclick="event.stopPropagation(); showGroupCallDetails('{{ $call['room_id'] }}', '{{ $call['type'] }}')">
                                 <span class="call-time">{{ formatCallDate($call['created_at'] ?? $call['started_at'] ?? now()) }}</span>
                             </div>
                             
-                            <!-- Group Call Icon -->
-                            <div class="flex-shrink-0" style="margin-left: 8px; padding: 8px;" 
-                                 onclick="event.stopPropagation(); joinGroupCall('{{ $call['room_id'] }}', '{{ $call['type'] }}')"
+                            <!-- Group Call Icon - Only this triggers join if active -->
+                            <div class="flex-shrink-0" style="margin-left: 8px; padding: 8px; cursor: pointer;" 
+                                 onclick="event.stopPropagation(); handleGroupCallClick('{{ $call['room_id'] }}', '{{ $call['type'] }}', {{ $call['is_active'] ?? false ? 'true' : 'false' }})"
                                  title="{{ $call['type'] == 'audio' ? 'Audio Group Call' : 'Video Group Call' }}">
                                 @if($call['is_active'] ?? false)
                                     @if($call['type'] == 'audio')
@@ -231,6 +236,9 @@
                     {{-- INDIVIDUAL CALL --}}
                     <div class="call-item border-bottom bg-white" 
                          data-call-id="{{ $call['id'] }}"
+                         data-room-id="{{ $call['room_id'] }}"
+                         data-call-type="{{ $call['type'] }}"
+                         data-call-status="{{ $call['status'] }}"
                          style="transition: background 0.2s; margin-bottom: 0;">
                         <div class="d-flex align-items-center">
                             <!-- Selection Checkbox -->
@@ -240,9 +248,9 @@
                                        onchange="updateDeleteButton()"
                                        style="width: 20px; height: 20px; cursor: pointer;">
                             </div>
-                            <!-- User Profile - Clickable for Profile -->
+                            <!-- User Profile - Clickable for Call Details (always show modal) -->
                             <div class="flex-shrink-0" style="margin-right: 12px; cursor: pointer;" 
-                                 onclick="openUserProfile({{ $call['other_user']->id }})">
+                                 onclick="showCallDetails({{ $call['id'] }})">
                                 @php
                                     // Check if user has profile picture file
                                     $hasCallProfilePic = false;
@@ -267,9 +275,9 @@
                                 @endif
                             </div>
 
-                            <!-- Call Info - Clickable for Chat/Profile -->
+                            <!-- Call Info - Clickable for Call Details (always show modal) -->
                             <div class="flex-grow-1 min-w-0 d-flex align-items-center justify-content-between" 
-                                 onclick="openUserChat({{ $call['other_user']->id }})" 
+                                 onclick="showCallDetails({{ $call['id'] }})" 
                                  style="cursor: pointer; flex: 1;">
                                 <div class="flex-grow-1 min-w-0" style="padding-right: 12px;">
                                     <div class="call-name text-truncate">{{ $call['other_user']->name }}</div>
@@ -293,14 +301,14 @@
                                 </div>
                             </div>
                             
-                            <!-- Call Icon - Only this triggers call -->
+                            <!-- Call Icon - Always start new call with correct type based on icon clicked -->
                             <div class="flex-shrink-0" style="margin-left: 8px; cursor: pointer; padding: 8px;" 
-                                 onclick="event.stopPropagation(); openCallWithUser({{ $call['other_user']->id }}, '{{ $call['type'] }}')"
-                                 title="{{ $call['type'] == 'audio' ? 'Audio Call' : 'Video Call' }}">
+                                 onclick="event.stopPropagation(); handleCallIconClick({{ $call['other_user']->id }}, event)"
+                                 title="Click to call">
                                 @if($call['type'] == 'audio')
-                                    <i class="bi bi-telephone-fill call-type-icon" style="font-size: 24px; color: #25d366;"></i>
+                                    <i class="bi bi-telephone-fill call-type-icon" style="font-size: 24px; color: #25d366;" data-call-type="audio"></i>
                                 @else
-                                    <i class="bi bi-camera-video-fill call-type-icon" style="font-size: 24px; color: #25d366;"></i>
+                                    <i class="bi bi-camera-video-fill call-type-icon" style="font-size: 24px; color: #25d366;" data-call-type="video"></i>
                                 @endif
                             </div>
                         </div>
@@ -378,12 +386,96 @@
     </div>
 </div>
 
+<!-- Group Call Details Modal -->
+<div class="modal fade" id="groupCallDetailsModal" tabindex="-1" aria-labelledby="groupCallDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="groupCallDetailsModalLabel">
+                    <i class="bi bi-telephone-fill me-2"></i>Call Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-4">
+                    <div class="mb-3">
+                        <i class="bi bi-camera-video-fill fs-1 text-primary" id="groupCallTypeIcon"></i>
+                    </div>
+                    <h6 id="groupCallTypeText" class="text-muted mb-1">Video Call</h6>
+                    <p class="text-muted mb-0" id="groupCallWithText">Group Call</p>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-12 text-center">
+                        <div class="p-3 bg-light rounded">
+                            <i class="bi bi-clock-history fs-4 text-primary d-block mb-2"></i>
+                            <small class="text-muted d-block">Duration</small>
+                            <strong id="groupCallDuration">--:--</strong>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <h6 class="mb-3"><i class="bi bi-people me-2"></i>Participants</h6>
+                    <div id="groupCallParticipantsList" style="max-height: 300px; overflow-y: auto;">
+                        <!-- Participants will be loaded here -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Individual Call Details Modal -->
+<div class="modal fade" id="callDetailsModal" tabindex="-1" aria-labelledby="callDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="callDetailsModalLabel">
+                    <i class="bi bi-telephone-fill me-2"></i>Call Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-4">
+                    <div class="mb-3">
+                        <i class="bi bi-camera-video-fill fs-1 text-primary" id="callTypeIcon"></i>
+                    </div>
+                    <h6 id="callTypeText" class="text-muted">Video Call</h6>
+                    <p class="text-muted mb-0" id="callOtherUserName">With User</p>
+                    <p class="mb-0 mt-2">
+                        <span id="callDirectionBadge" class="badge"></span>
+                    </p>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-12 text-center">
+                        <div class="p-3 bg-light rounded">
+                            <i class="bi bi-clock-history fs-4 text-primary d-block mb-2"></i>
+                            <small class="text-muted d-block">Duration</small>
+                            <strong id="callDuration">--:--</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // Auto-refresh calls list every 5 seconds
 let callsRefreshInterval = null;
 let callCheckInterval = null;
 let incomingCallModal = null;
 let currentCallRequestId = null;
+let currentCallRoomId = null;
+let currentCallType = null;
 
 function refreshCallsList() {
     // Reload the page to get updated calls
@@ -401,8 +493,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Start checking for incoming calls
     startCallChecking();
     
-    // Refresh calls list every 5 seconds
-    callsRefreshInterval = setInterval(refreshCallsList, 5000);
+    // Auto-refresh disabled - removed to prevent page reload
+    // callsRefreshInterval = setInterval(refreshCallsList, 5000);
     
     // Cleanup on page unload
     window.addEventListener('beforeunload', function() {
@@ -418,7 +510,8 @@ document.addEventListener('DOMContentLoaded', function() {
 // Start checking for incoming calls every 2 seconds
 function startCallChecking() {
     checkIncomingCalls();
-    callCheckInterval = setInterval(checkIncomingCalls, 2000); // Check every 2 seconds
+    // Check for incoming calls every 2 seconds (but don't refresh the page)
+    callCheckInterval = setInterval(checkIncomingCalls, 2000); // Check every 2 seconds for incoming calls
 }
 
 // Check for incoming calls
@@ -432,21 +525,109 @@ function checkIncomingCalls() {
     })
     .then(response => response.json())
     .then(data => {
+        // Debug log - check API response
+        console.log('Incoming Calls API Response:', {
+            count: data.count,
+            calls: data.calls,
+            firstCall: data.calls && data.calls.length > 0 ? data.calls[0] : null
+        });
+        
+        // Check if currently displayed call is still valid
+        if (currentCallRequestId) {
+            const modalElement = document.getElementById('incomingCallModal');
+            const isModalShown = modalElement && modalElement.classList.contains('show');
+            
+            if (isModalShown) {
+                // Check if current call is still in the incoming calls list
+                const currentCallStillExists = data.calls && data.calls.some(call => call.id === currentCallRequestId);
+                
+                if (!currentCallStillExists) {
+                    // Current call is no longer in the list - it was cancelled/ended
+                    console.log('Call was cancelled/ended by caller, closing modal');
+                    if (incomingCallModal) {
+                        incomingCallModal.hide();
+                    }
+                    currentCallRequestId = null;
+                    return; // Don't show new call if current one was cancelled
+                } else {
+                    // Current call still exists, verify its status directly
+                    checkCurrentCallStatus();
+                }
+            }
+        }
+        
         // Show modal for incoming calls automatically
         if (data.count > 0 && data.calls.length > 0) {
+            const firstCall = data.calls[0];
+            
+            // Debug log - check call type in API response
+            console.log('First Incoming Call:', {
+                id: firstCall.id,
+                room_id: firstCall.room_id,
+                type: firstCall.type,
+                roomIdStartsWithAudio: firstCall.room_id ? firstCall.room_id.startsWith('audio_') : false
+            });
+            
             // Show modal for first incoming call automatically
             const modalElement = document.getElementById('incomingCallModal');
             if (modalElement) {
                 const isModalShown = modalElement.classList.contains('show');
                 
-                if (!isModalShown && incomingCallModal && data.calls[0]) {
-                    showIncomingCallModal(data.calls[0]);
+                // Only show if it's a new call (different ID) or modal is not shown
+                if (!isModalShown && incomingCallModal && firstCall) {
+                    // If there's a different call, update it
+                    if (currentCallRequestId && currentCallRequestId !== firstCall.id) {
+                        // New call came in, update modal
+                        showIncomingCallModal(firstCall);
+                    } else if (!currentCallRequestId) {
+                        // No current call, show new one
+                        showIncomingCallModal(firstCall);
+                    }
                 }
             }
         }
     })
     .catch(error => {
         console.error('Error checking calls:', error);
+    });
+}
+
+// Check current call status directly
+function checkCurrentCallStatus() {
+    if (!currentCallRequestId) return;
+    
+    // Use getCallDetails API to check call status
+    fetch('{{ route("api.call.details") }}?call_id=' + encodeURIComponent(currentCallRequestId), {
+        method: 'GET',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        // If call status is ended, rejected, or cancelled, close the modal
+        if (data.success && data.call) {
+            const status = data.call.status;
+            if (status === 'ended' || status === 'rejected' || status === 'cancelled') {
+                console.log('Call status changed to:', status, '- closing modal');
+                if (incomingCallModal) {
+                    incomingCallModal.hide();
+                }
+                currentCallRequestId = null;
+            }
+        } else if (!data.success) {
+            // Call not found or error - close modal
+            console.log('Call not found or error - closing modal');
+            if (incomingCallModal) {
+                incomingCallModal.hide();
+            }
+            currentCallRequestId = null;
+        }
+    })
+    .catch(error => {
+        console.error('Error checking call status:', error);
+        // On error, don't close modal - might be network issue
     });
 }
 
@@ -458,6 +639,7 @@ function showIncomingCallModal(call) {
     }
     
     currentCallRequestId = call.id;
+    currentCallRoomId = call.room_id || null;
     
     // Update caller information
     const callerNameEl = document.getElementById('callerName');
@@ -470,26 +652,86 @@ function showIncomingCallModal(call) {
         callerEmailEl.textContent = call.caller.email || '';
     }
     
-    // Show call type (video or audio)
+    // CRITICAL: ALWAYS check room_id FIRST - this is the source of truth
+    // Room ID determines call type, NOT API response
+    let callType = 'video'; // Default
+    
+    if (call.room_id) {
+        // Check room_id prefix - this is the most reliable way
+        if (call.room_id.startsWith('audio_')) {
+            callType = 'audio';
+        } else if (call.room_id.startsWith('group_')) {
+            // For group calls, use API response type if available
+            callType = (call.type || 'video').toLowerCase();
+        } else {
+            // Regular video calls (room_ prefix or no prefix)
+            callType = 'video';
+        }
+    } else if (call.type) {
+        // Fallback: use API response only if room_id not available
+        callType = call.type.toLowerCase();
+    }
+    
+    // Final verification - ALWAYS trust room_id for audio calls
+    if (call.room_id && call.room_id.startsWith('audio_')) {
+        callType = 'audio';
+    }
+    
+    // Ensure callType is lowercase
+    callType = callType.toLowerCase();
+    
+    // Store current call type for use in accept function
+    currentCallType = callType;
+    
+    // Debug log
+    console.log('Incoming Call Type:', {
+        originalType: call.type,
+        roomId: call.room_id,
+        roomIdStartsWithAudio: call.room_id ? call.room_id.startsWith('audio_') : false,
+        finalType: callType,
+        willShowAudio: callType === 'audio',
+        storedCallType: currentCallType
+    });
+    
+    // Show call type (video or audio) - FORCE UPDATE
     const callTypeIcon = document.getElementById('callTypeIcon');
     const callTypeText = document.getElementById('callTypeText');
     
-    if (call.type === 'audio') {
+    // Final check - ALWAYS trust room_id
+    if (call.room_id && String(call.room_id).trim().startsWith('audio_')) {
+        callType = 'audio';
+    }
+    
+    console.log('Setting Incoming Call Icon:', {
+        callType: callType,
+        roomId: call.room_id,
+        willShowAudio: callType === 'audio'
+    });
+    
+    if (callType === 'audio') {
+        // Audio call - show telephone icon and "Audio Call" text
         if (callTypeIcon) {
             callTypeIcon.className = 'bi bi-telephone-fill fs-2';
+            callTypeIcon.setAttribute('class', 'bi bi-telephone-fill fs-2');
         }
         if (callTypeText) {
             callTypeText.textContent = 'Audio Call';
+            callTypeText.innerText = 'Audio Call';
             callTypeText.className = 'text-info fw-semibold mb-4';
         }
+        console.log('✓ Incoming Call: Set to Audio Call (telephone icon)');
     } else {
+        // Video call - show camera icon and "Video Call" text
         if (callTypeIcon) {
             callTypeIcon.className = 'bi bi-camera-video-fill fs-2';
+            callTypeIcon.setAttribute('class', 'bi bi-camera-video-fill fs-2');
         }
         if (callTypeText) {
             callTypeText.textContent = 'Video Call';
+            callTypeText.innerText = 'Video Call';
             callTypeText.className = 'text-success fw-semibold mb-4';
         }
+        console.log('✓ Incoming Call: Set to Video Call (camera icon)');
     }
     
     // Show modal
@@ -531,11 +773,39 @@ function acceptIncomingCall() {
                 incomingCallModal.hide();
             }
             
-            // Redirect to appropriate call page
-            if (data.call_type === 'audio') {
-                window.location.href = '{{ route("audio.call") }}?room=' + encodeURIComponent(data.room_id);
+            // Determine call type from room_id - this is the source of truth
+            let callType = 'video'; // Default to video
+            const roomId = data.room_id || currentCallRoomId;
+            
+            // Check room_id prefix to determine call type
+            if (roomId) {
+                if (roomId.startsWith('audio_')) {
+                    callType = 'audio';
+                } else {
+                    callType = 'video';
+                }
+            } else if (currentCallType) {
+                // Fallback: use stored call type
+                callType = currentCallType;
+            } else if (data.call_type) {
+                // Fallback: use API response if available
+                callType = data.call_type.toLowerCase();
+            }
+            
+            // Debug log
+            console.log('Accept Call Redirect:', {
+                roomId: roomId,
+                storedCallType: currentCallType,
+                apiCallType: data.call_type,
+                finalCallType: callType,
+                willRedirectToAudio: callType === 'audio'
+            });
+            
+            // Redirect to appropriate call page based on room_id
+            if (callType === 'audio') {
+                window.location.href = '{{ route("audio.call") }}?room=' + encodeURIComponent(roomId);
             } else {
-                window.location.href = '{{ route("video.call") }}?room=' + encodeURIComponent(data.room_id);
+                window.location.href = '{{ route("video.call") }}?room=' + encodeURIComponent(roomId);
             }
         } else {
             alert(data.message || 'Failed to accept call');
@@ -569,8 +839,10 @@ function rejectIncomingCall() {
             incomingCallModal.hide();
         }
         
-        // Reset current call request ID
+        // Reset current call request ID and related variables
         currentCallRequestId = null;
+        currentCallRoomId = null;
+        currentCallType = null;
         
         // Refresh calls list to show updated status
         refreshCallsList();
@@ -581,7 +853,10 @@ function rejectIncomingCall() {
         if (incomingCallModal) {
             incomingCallModal.hide();
         }
+        // Reset all call-related variables
         currentCallRequestId = null;
+        currentCallRoomId = null;
+        currentCallType = null;
     });
 }
 
@@ -600,6 +875,288 @@ function openUserProfile(userId) {
 function openUserChat(userId) {
     // Navigate to dashboard and open chat with user
     window.location.href = '{{ route("dashboard") }}?user=' + userId;
+}
+
+// Handle group call click - show modal if inactive, join if active
+function handleGroupCallClick(roomId, callType, isActive) {
+    if (isActive) {
+        // If call is active, join it
+        joinGroupCall(roomId, callType);
+    } else {
+        // If call is inactive, show details modal
+        showGroupCallDetails(roomId, callType);
+    }
+}
+
+// Show group call details modal
+function showGroupCallDetails(roomId, callType) {
+    // Show loading state
+    document.getElementById('groupCallDuration').textContent = 'Loading...';
+    document.getElementById('groupCallWithText').textContent = 'Loading...';
+    document.getElementById('groupCallParticipantsList').innerHTML = '<div class="text-center p-3"><div class="spinner-border spinner-border-sm" role="status"></div></div>';
+    
+    // Determine call type from room_id - this is the source of truth
+    // Check: audio call (audio_ prefix) or video call
+    let detectedCallType = 'video'; // Default to video
+    
+    if (roomId) {
+        const roomIdStr = String(roomId).trim();
+        // Check if it's an audio call
+        if (roomIdStr.startsWith('audio_')) {
+            detectedCallType = 'audio';
+        } else {
+            // Video call (group_ prefix or room_ prefix)
+            detectedCallType = 'video';
+        }
+    } else if (callType) {
+        // Fallback: use parameter if room_id not available
+        detectedCallType = String(callType).toLowerCase();
+    }
+    
+    // Final check - ALWAYS trust room_id for audio calls
+    if (roomId && String(roomId).trim().startsWith('audio_')) {
+        detectedCallType = 'audio';
+    }
+    
+    detectedCallType = detectedCallType.toLowerCase();
+    
+    // Set call type icon
+    const iconElement = document.getElementById('groupCallTypeIcon');
+    const typeText = document.getElementById('groupCallTypeText');
+    const withText = document.getElementById('groupCallWithText');
+    
+    // Debug log
+    console.log('Group Call Details:', {
+        roomId: roomId,
+        parameterCallType: callType,
+        detectedCallType: detectedCallType,
+        isAudio: detectedCallType === 'audio',
+        isVideo: detectedCallType === 'video'
+    });
+    
+    // Set icon and text based on detected call type
+    if (detectedCallType === 'audio') {
+        // Audio call - show telephone icon and "Audio Call" text
+        iconElement.className = 'bi bi-telephone-fill fs-1 text-primary';
+        typeText.textContent = 'Audio Call';
+        console.log('✓ Group Call: Set to Audio Call (telephone icon)');
+    } else {
+        // Video call - show camera icon and "Video Call" text
+        iconElement.className = 'bi bi-camera-video-fill fs-1 text-primary';
+        typeText.textContent = 'Video Call';
+        console.log('✓ Group Call: Set to Video Call (camera icon)');
+    }
+    
+    // Fetch group call details
+    fetch('{{ route("api.group.call.get") }}?room_id=' + encodeURIComponent(roomId), {
+        method: 'GET',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Determine call type from room_id - this is the source of truth
+            // Check: audio call (audio_ prefix) or video call
+            let finalCallType = 'video'; // Default to video
+            
+            if (data.group_call.room_id) {
+                const roomIdStr = String(data.group_call.room_id).trim();
+                // Check if it's an audio call
+                if (roomIdStr.startsWith('audio_')) {
+                    finalCallType = 'audio';
+                } else {
+                    // Video call (group_ prefix or room_ prefix)
+                    finalCallType = 'video';
+                }
+            } else if (data.group_call.type) {
+                // Fallback: use API response type if room_id not available
+                finalCallType = String(data.group_call.type).toLowerCase();
+            }
+            
+            // Final check - ALWAYS trust room_id for audio calls
+            if (data.group_call.room_id && String(data.group_call.room_id).trim().startsWith('audio_')) {
+                finalCallType = 'audio';
+            }
+            
+            finalCallType = finalCallType.toLowerCase();
+            
+            // Debug log
+            console.log('Group Call API Response:', {
+                roomId: data.group_call.room_id,
+                apiType: data.group_call.type,
+                finalCallType: finalCallType,
+                isAudio: finalCallType === 'audio',
+                isVideo: finalCallType === 'video'
+            });
+            
+            // Set icon and text based on final call type
+            if (finalCallType === 'audio') {
+                // Audio call - show telephone icon and "Audio Call" text
+                iconElement.className = 'bi bi-telephone-fill fs-1 text-primary';
+                typeText.textContent = 'Audio Call';
+                console.log('✓ Group Call API: Set to Audio Call (telephone icon)');
+            } else {
+                // Video call - show camera icon and "Video Call" text
+                iconElement.className = 'bi bi-camera-video-fill fs-1 text-primary';
+                typeText.textContent = 'Video Call';
+                console.log('✓ Group Call API: Set to Video Call (camera icon)');
+            }
+            
+            // Set duration
+            document.getElementById('groupCallDuration').textContent = data.group_call.duration_text || '0:00';
+            
+            // Set "With" text - show first participant name or "Group Call"
+            if (data.participants && data.participants.length > 0) {
+                const firstParticipant = data.participants[0];
+                if (data.participants.length === 1) {
+                    withText.textContent = 'With ' + firstParticipant.name;
+                } else if (data.participants.length === 2) {
+                    withText.textContent = 'With ' + firstParticipant.name + ' & ' + data.participants[1].name;
+                } else {
+                    withText.textContent = 'With ' + firstParticipant.name + ' & ' + (data.participants.length - 1) + ' others';
+                }
+            } else {
+                withText.textContent = 'Group Call';
+            }
+            
+            // Display participants
+            const participantsList = document.getElementById('groupCallParticipantsList');
+            if (data.participants.length > 0) {
+                participantsList.innerHTML = data.participants.map(participant => {
+                    const hasPic = participant.profile_picture;
+                    const initial = participant.name.charAt(0).toUpperCase();
+                    const statusBadge = participant.status === 'joined' 
+                        ? '<span class="badge bg-primary ms-2">Joined</span>' 
+                        : '<span class="badge bg-info ms-2">Left</span>';
+                    
+                    return `
+                        <div class="d-flex align-items-center mb-3 p-2 border rounded">
+                            <div class="flex-shrink-0 me-3">
+                                ${hasPic 
+                                    ? `<img src="${participant.profile_picture}" alt="${participant.name}" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">`
+                                    : `<div class="rounded-circle bg-gradient d-flex align-items-center justify-content-center text-white" style="width: 40px; height: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"><span style="font-size: 16px; font-weight: bold;">${initial}</span></div>`
+                                }
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="fw-semibold">${participant.name} ${statusBadge}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                participantsList.innerHTML = '<p class="text-muted text-center">No participants found</p>';
+            }
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('groupCallDetailsModal'));
+            modal.show();
+        } else {
+            alert(data.message || 'Failed to load group call details');
+        }
+    })
+    .catch(error => {
+        console.error('Error loading group call details:', error);
+        alert('Error loading group call details');
+    });
+}
+
+// Show individual call details
+function showCallDetails(callId) {
+    // Show loading state
+    document.getElementById('callDuration').textContent = 'Loading...';
+    
+    // Fetch call details
+    fetch('{{ route("api.call.details") }}?call_id=' + encodeURIComponent(callId), {
+        method: 'GET',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Set call type icon and text
+            const iconElement = document.getElementById('callTypeIcon');
+            const typeText = document.getElementById('callTypeText');
+            const otherUserName = document.getElementById('callOtherUserName');
+            const directionBadge = document.getElementById('callDirectionBadge');
+            
+            // Determine call type from room_id - this is the source of truth
+            // Check: audio call (audio_ prefix) or video call (room_ prefix or no prefix)
+            let callType = 'video'; // Default to video
+            
+            if (data.call.room_id) {
+                const roomId = String(data.call.room_id).trim();
+                // Check if it's an audio call
+                if (roomId.startsWith('audio_')) {
+                    callType = 'audio';
+                } else {
+                    // Video call (room_ prefix or group_ prefix)
+                    callType = 'video';
+                }
+            } else if (data.call.type) {
+                // Fallback: use API response if room_id not available
+                callType = String(data.call.type).toLowerCase();
+            }
+            
+            // Final check - ALWAYS trust room_id for audio calls
+            if (data.call.room_id && String(data.call.room_id).trim().startsWith('audio_')) {
+                callType = 'audio';
+            }
+            
+            callType = callType.toLowerCase();
+            
+            // Debug log
+            console.log('Individual Call Details:', {
+                roomId: data.call.room_id,
+                apiType: data.call.type,
+                detectedCallType: callType,
+                isAudio: callType === 'audio',
+                isVideo: callType === 'video'
+            });
+            
+            // Set icon and text based on call type
+            if (callType === 'audio') {
+                // Audio call - show telephone icon and "Audio Call" text
+                iconElement.className = 'bi bi-telephone-fill fs-1 text-primary';
+                typeText.textContent = 'Audio Call';
+                console.log('✓ Set to Audio Call (telephone icon)');
+            } else {
+                // Video call - show camera icon and "Video Call" text
+                iconElement.className = 'bi bi-camera-video-fill fs-1 text-primary';
+                typeText.textContent = 'Video Call';
+                console.log('✓ Set to Video Call (camera icon)');
+            }
+            
+            otherUserName.textContent = 'With ' + data.other_user.name;
+            
+            // Set call direction badge
+            if (data.call.is_outgoing) {
+                directionBadge.className = 'badge bg-primary';
+                directionBadge.textContent = 'Outgoing';
+            } else {
+                directionBadge.className = 'badge bg-info';
+                directionBadge.textContent = 'Incoming';
+            }
+            
+            // Set duration (current call only)
+            document.getElementById('callDuration').textContent = data.call.duration_text || '0:00';
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('callDetailsModal'));
+            modal.show();
+        } else {
+            alert(data.message || 'Failed to load call details');
+        }
+    })
+    .catch(error => {
+        console.error('Error loading call details:', error);
+        alert('Error loading call details');
+    });
 }
 
 // Join group call
@@ -640,8 +1197,52 @@ function joinGroupCall(roomId, callType) {
     });
 }
 
+// Handle call icon click - determine call type from icon
+function handleCallIconClick(userId, event) {
+    // Get call type from the icon's data attribute or from the clicked element
+    let callType = 'video'; // Default to video
+    const clickedElement = event.target;
+    
+    // Check if clicked element or its parent has data-call-type attribute
+    if (clickedElement.getAttribute('data-call-type')) {
+        callType = clickedElement.getAttribute('data-call-type');
+    } else if (clickedElement.closest('[data-call-type]')) {
+        callType = clickedElement.closest('[data-call-type]').getAttribute('data-call-type');
+    } else if (clickedElement.classList.contains('bi-telephone-fill')) {
+        // If phone icon was clicked, it's audio call
+        callType = 'audio';
+    } else if (clickedElement.classList.contains('bi-camera-video-fill')) {
+        // If video icon was clicked, it's video call
+        callType = 'video';
+    }
+    
+    // Normalize call type - ensure it's lowercase
+    callType = String(callType || '').toLowerCase().trim();
+    
+    // Debug log
+    console.log('handleCallIconClick:', {
+        userId: userId,
+        callType: callType,
+        clickedElement: clickedElement,
+        willInitiateAudio: callType === 'audio'
+    });
+    
+    // Call the openCallWithUser function
+    openCallWithUser(userId, callType);
+}
+
 // Open call with user (only from icon click)
 function openCallWithUser(userId, callType) {
+    // Normalize call type - ensure it's lowercase
+    callType = String(callType || '').toLowerCase().trim();
+    
+    // Debug log
+    console.log('openCallWithUser:', {
+        userId: userId,
+        callType: callType,
+        willInitiateAudio: callType === 'audio'
+    });
+    
     if (callType === 'audio') {
         // For audio call, we need to create a new call request
         fetch('{{ route("api.call.audio.initiate") }}', {
@@ -657,7 +1258,12 @@ function openCallWithUser(userId, callType) {
         })
         .then(response => response.json())
         .then(data => {
+            console.log('Audio Call Initiate Response:', data);
             if (data.success) {
+                // Verify room_id has audio_ prefix
+                if (data.room_id && !data.room_id.startsWith('audio_')) {
+                    console.error('ERROR: Audio call room_id does not start with audio_', data.room_id);
+                }
                 window.location.href = '{{ route("audio.call") }}?room=' + encodeURIComponent(data.room_id);
             } else {
                 alert('Failed to start audio call');
@@ -682,6 +1288,7 @@ function openCallWithUser(userId, callType) {
         })
         .then(response => response.json())
         .then(data => {
+            console.log('Video Call Initiate Response:', data);
             if (data.success) {
                 window.location.href = '{{ route("video.call") }}?room=' + encodeURIComponent(data.room_id);
             } else {
@@ -761,10 +1368,10 @@ function toggleSelectionMode() {
             item.style.cursor = 'pointer';
         });
     } else {
-        // Exit selection mode - Resume auto-refresh
-        if (!callsRefreshInterval) {
-            callsRefreshInterval = setInterval(refreshCallsList, 5000);
-        }
+        // Exit selection mode - Auto-refresh disabled
+        // if (!callsRefreshInterval) {
+        //     callsRefreshInterval = setInterval(refreshCallsList, 5000);
+        // }
         
         checkboxes.forEach(cb => cb.classList.add('d-none'));
         deleteButton.classList.add('d-none');

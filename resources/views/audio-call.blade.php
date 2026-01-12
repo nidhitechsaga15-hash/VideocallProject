@@ -511,8 +511,9 @@ async function init() {
             }
         }
         
-        // For demo: simulate receiving remote stream
-        simulateRemoteConnection();
+        // Check call status before starting connection
+        // Only start connection if call is accepted (for receiver) or if user is caller
+        checkCallStatusBeforeConnect();
         
     } catch (error) {
         console.error('Error accessing media devices:', error);
@@ -933,6 +934,52 @@ async function checkIceCandidates() {
         }
     } catch (error) {
         console.error('Error checking ICE candidates:', error);
+    }
+}
+
+// Check call status before connecting
+async function checkCallStatusBeforeConnect() {
+    if (!roomId) {
+        console.log('No room ID, starting connection anyway');
+        simulateRemoteConnection();
+        return;
+    }
+    
+    try {
+        const response = await fetch('{{ route("api.call.status") }}?room_id=' + roomId, {
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        console.log('Call Status Check:', {
+            status: data.status,
+            other_user_ready: data.other_user_ready,
+            roomId: roomId
+        });
+        
+        // Only start connection if:
+        // 1. Call is accepted (status === 'accepted')
+        // 2. Or if other user is ready (for caller)
+        // 3. Or if status is not 'pending' (call already in progress)
+        if (data.status === 'accepted' || data.other_user_ready || data.status !== 'pending') {
+            simulateRemoteConnection();
+        } else {
+            // Call is pending - wait for acceptance
+            if (callStatus) callStatus.textContent = 'Waiting for call acceptance...';
+            console.log('Call is pending, waiting for acceptance');
+            
+            // Check again after 2 seconds
+            setTimeout(checkCallStatusBeforeConnect, 2000);
+        }
+    } catch (error) {
+        console.error('Error checking call status:', error);
+        // If error, start connection anyway (fallback)
+        simulateRemoteConnection();
     }
 }
 

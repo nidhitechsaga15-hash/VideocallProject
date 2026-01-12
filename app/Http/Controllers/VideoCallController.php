@@ -138,9 +138,16 @@ class VideoCallController extends Controller
                 $displayName = 'Group Call';
             }
             
-            // Check if call is active (has active participants)
+            // Check if call is active (has active participants and not ended)
             $activeParticipants = $groupCall->activeParticipants()->count();
-            $isActive = $groupCall->status === 'active' && $activeParticipants > 1;
+            // Call is active only if: status is 'active', has active participants, hasn't ended, and was recently updated
+            // If call hasn't been updated in last 15 minutes, consider it inactive
+            $lastUpdated = $groupCall->updated_at ?? $groupCall->created_at;
+            $minutesSinceUpdate = $lastUpdated ? now()->diffInMinutes($lastUpdated) : 999;
+            $isActive = $groupCall->status === 'active' 
+                && is_null($groupCall->ended_at)
+                && $activeParticipants > 0
+                && $minutesSinceUpdate < 15; // Call must have been active in last 15 minutes
             
             return [
                 'id' => 'group_' . $groupCall->id,
@@ -614,8 +621,19 @@ class VideoCallController extends Controller
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function($call) {
-                // Determine call type from room_id
-                $callType = strpos($call->room_id, 'audio_') === 0 ? 'audio' : 'video';
+                // Determine call type from room_id - strict check
+                // Check if room_id starts with 'audio_' (position 0)
+                $callType = 'video'; // Default to video
+                if ($call->room_id) {
+                    if (strpos($call->room_id, 'audio_') === 0) {
+                        $callType = 'audio';
+                    } elseif (strpos($call->room_id, 'group_') === 0) {
+                        // Group calls might have type in the call itself, but for individual calls
+                        // we only check audio_ prefix
+                        $callType = 'video';
+                    }
+                }
+                
                 return [
                     'id' => $call->id,
                     'room_id' => $call->room_id,
@@ -989,7 +1007,7 @@ class VideoCallController extends Controller
             ],
         ]);
     }
-
+    
     /**
      * Update user profile
      */
@@ -1075,16 +1093,181 @@ class VideoCallController extends Controller
     {
         $request->validate([
             'receiver_id' => 'required|exists:users,id',
-            'message' => 'required|string|max:5000',
-            'type' => 'nullable|in:text,image,file,audio',
+            'message' => 'nullable|string|max:5000',
+            'type' => 'nullable|in:text,image,file,audio,video,location,contact',
+            'file' => 'nullable|file|mimes:jpeg,jpg,png,gif,webp,heic,heif,pdf,doc,docx,txt,xls,xlsx,ppt,pptx,mp4,avi,mov,wmv,flv,webm,mp3,wav,ogg,m4a|max:51200', // Max 50MB
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+            'location_url' => 'nullable|string|max:500',
+            'contact_user_id' => 'nullable|exists:users,id',
+            'contact_name' => 'nullable|string|max:255',
+            'contact_email' => 'nullable|email|max:255',
+        ], [
+            'file.max' => 'File size must not exceed 50MB',
+            'file.mimes' => 'File type not supported. Please select a valid image, video, audio, or document file.',
         ]);
+
+        $filePath = null;
+        $messageType = $request->type ?? 'text';
+        
+        // Handle location type
+        if ($messageType === 'location') {
+            if (!$request->latitude || !$request->longitude) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Location coordinates are required'
+                ], 400);
+            }
+            
+            // Store location data in message text
+            $locationData = [
+                'latitude' => $request->latitude,
+                'longitude' => $request->longitude,
+                'url' => $request->location_url ?? "https://www.google.com/maps?q={$request->latitude},{$request->longitude}"
+            ];
+            
+            $messageText = $request->message ?? "📍 Location\nLatitude: {$request->latitude}\nLongitude: {$request->longitude}";
+            
+            $message = Message::create([
+                'sender_id' => Auth::id(),
+                'receiver_id' => $request->receiver_id,
+                'message' => $messageText,
+                'type' => 'location',
+                'file_path' => json_encode($locationData), // Store location data in file_path as JSON
+            ]);
+
+            $message->load(['sender:id,name,profile_picture', 'receiver:id,name,profile_picture']);
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+            ]);
+        }
+        
+        // Handle contact type
+        if ($messageType === 'contact') {
+            if (!$request->contact_user_id || !$request->contact_name) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Contact information is required'
+                ], 400);
+            }
+            
+            // Store contact data in file_path as JSON (similar to location)
+            $contactData = [
+                'user_id' => $request->contact_user_id,
+                'name' => $request->contact_name,
+                'email' => $request->contact_email ?? '',
+            ];
+            
+            $messageText = $request->message ?? "👤 Contact\nName: {$request->contact_name}\nEmail: " . ($request->contact_email ?? 'N/A');
+            
+            $message = Message::create([
+                'sender_id' => Auth::id(),
+                'receiver_id' => $request->receiver_id,
+                'message' => $messageText,
+                'type' => 'contact',
+                'file_path' => json_encode($contactData), // Store contact data in file_path as JSON
+            ]);
+
+            $message->load(['sender:id,name,profile_picture', 'receiver:id,name,profile_picture']);
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+            ]);
+        }
+
+        // Handle file upload
+        if ($request->hasFile('file')) {
+            try {
+                $file = $request->file('file');
+                
+                // Check if file is valid
+                if (!$file->isValid()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Invalid file. Error: ' . $file->getError()
+                    ], 400);
+                }
+                
+                $originalName = $file->getClientOriginalName();
+                $extension = $file->getClientOriginalExtension();
+                
+                // Determine file type
+                $mimeType = $file->getMimeType();
+                if (strpos($mimeType, 'image/') === 0) {
+                    $messageType = 'image';
+                    $folder = 'messages/images';
+                } elseif (strpos($mimeType, 'video/') === 0) {
+                    $messageType = 'video';
+                    $folder = 'messages/videos';
+                } elseif (strpos($mimeType, 'audio/') === 0) {
+                    $messageType = 'audio';
+                    $folder = 'messages/audio';
+                } else {
+                    $messageType = 'file';
+                    $folder = 'messages/files';
+                }
+
+                // Create directory if it doesn't exist
+                $uploadPath = public_path('storage/' . $folder);
+                if (!file_exists($uploadPath)) {
+                    if (!mkdir($uploadPath, 0755, true)) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Failed to create upload directory. Please check permissions.'
+                        ], 500);
+                    }
+                }
+
+                // Check if directory is writable
+                if (!is_writable($uploadPath)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Upload directory is not writable. Please check permissions.'
+                    ], 500);
+                }
+
+                // Generate unique filename
+                $fileName = time() . '_' . uniqid() . '.' . $extension;
+                
+                // Move file with error handling
+                if (!$file->move($uploadPath, $fileName)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Failed to save file. Please try again.'
+                    ], 500);
+                }
+                
+                $filePath = $folder . '/' . $fileName;
+            } catch (\Exception $e) {
+                \Log::error('File upload error: ' . $e->getMessage());
+                return response()->json([
+                    'success' => false,
+                    'message' => 'File upload failed: ' . $e->getMessage()
+                ], 500);
+            }
+        } elseif ($request->file_path) {
+            // If file_path is provided directly (for already uploaded files)
+            $filePath = $request->file_path;
+        }
+
+        // Message text is optional for media messages
+        $messageText = $request->message;
+        if (empty($messageText) && $filePath) {
+            // If no message text, use file name or default
+            $messageText = $request->hasFile('file') 
+                ? $request->file('file')->getClientOriginalName() 
+                : 'Media';
+        }
 
         $message = Message::create([
             'sender_id' => Auth::id(),
             'receiver_id' => $request->receiver_id,
-            'message' => $request->message,
-            'type' => $request->type ?? 'text',
-            'file_path' => $request->file_path ?? null,
+            'message' => $messageText,
+            'type' => $messageType,
+            'file_path' => $filePath,
         ]);
 
         $message->load(['sender:id,name,profile_picture', 'receiver:id,name,profile_picture']);
@@ -1407,17 +1590,83 @@ class VideoCallController extends Controller
             return response()->json(['success' => false, 'message' => 'Not a participant'], 403);
         }
         
-        $participants = $groupCall->activeParticipants()
+        // Get all participants (both joined and left) for history
+        $allParticipants = $groupCall->participants()
             ->with('user:id,name,profile_picture')
             ->get()
             ->map(function($p) {
+                $hasPic = $p->user->profile_picture && file_exists(public_path('storage/profiles/' . $p->user->profile_picture));
                 return [
                     'id' => $p->user->id,
                     'name' => $p->user->name,
-                    'profile_picture' => $p->user->profile_picture_url ?? null,
+                    'profile_picture' => $hasPic ? asset('storage/profiles/' . $p->user->profile_picture) : null,
+                    'status' => $p->status,
                     'joined_at' => $p->joined_at,
+                    'left_at' => $p->left_at,
                 ];
             });
+        
+        // Calculate call duration - use actual call start and end times
+        $duration = null;
+        $durationText = '0:00';
+        
+        // Only calculate duration for ended calls
+        if ($groupCall->status === 'ended') {
+            // Get actual call start time - earliest joined_at or started_at
+            $firstParticipant = $groupCall->participants()
+                ->whereNotNull('joined_at')
+                ->orderBy('joined_at', 'asc')
+                ->first();
+            
+            // Use first participant's joined_at if available, otherwise use started_at
+            if ($firstParticipant && $firstParticipant->joined_at) {
+                $actualStartTime = $firstParticipant->joined_at;
+            } elseif ($groupCall->started_at) {
+                $actualStartTime = $groupCall->started_at;
+            } else {
+                // If no start time available, can't calculate duration
+                $actualStartTime = null;
+            }
+            
+            // Get actual call end time
+            if ($groupCall->ended_at) {
+                // Use ended_at if it's set
+                $endTime = $groupCall->ended_at;
+            } else {
+                // If call is ended but ended_at is null, use last participant's left_at
+                $lastParticipant = $groupCall->participants()
+                    ->whereNotNull('left_at')
+                    ->orderBy('left_at', 'desc')
+                    ->first();
+                
+                if ($lastParticipant && $lastParticipant->left_at) {
+                    $endTime = $lastParticipant->left_at;
+                } else {
+                    // Fallback: use updated_at only if it's after started_at
+                    if ($groupCall->updated_at && $actualStartTime && $groupCall->updated_at > $actualStartTime) {
+                        $endTime = $groupCall->updated_at;
+                    } else {
+                        $endTime = $actualStartTime; // Can't determine end time
+                    }
+                }
+            }
+            
+            // Calculate duration only if we have valid start and end times
+            if ($actualStartTime && $endTime && $endTime >= $actualStartTime) {
+                $duration = $actualStartTime->diffInSeconds($endTime);
+                
+                // Calculate duration text
+                $hours = floor($duration / 3600);
+                $minutes = floor(($duration % 3600) / 60);
+                $seconds = $duration % 60;
+                
+                if ($hours > 0) {
+                    $durationText = sprintf('%d:%02d:%02d', $hours, $minutes, $seconds);
+                } else {
+                    $durationText = sprintf('%d:%02d', $minutes, $seconds);
+                }
+            }
+        }
         
         return response()->json([
             'success' => true,
@@ -1428,8 +1677,11 @@ class VideoCallController extends Controller
                 'status' => $groupCall->status,
                 'created_by' => $groupCall->created_by,
                 'started_at' => $groupCall->started_at,
+                'ended_at' => $groupCall->ended_at,
+                'duration' => $duration,
+                'duration_text' => $durationText,
             ],
-            'participants' => $participants,
+            'participants' => $allParticipants,
         ]);
     }
 
@@ -1518,6 +1770,121 @@ class VideoCallController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Left group call successfully',
+        ]);
+    }
+
+    /**
+     * Get individual call details
+     */
+    public function getCallDetails(Request $request)
+    {
+        $callId = $request->get('call_id');
+        
+        if (!$callId) {
+            return response()->json(['success' => false, 'message' => 'Call ID required'], 400);
+        }
+        
+        $userId = Auth::id();
+        $call = CallRequest::where('id', $callId)
+            ->where(function($query) use ($userId) {
+                $query->where('caller_id', $userId)
+                      ->orWhere('receiver_id', $userId);
+            })
+            ->with(['caller:id,name,profile_picture', 'receiver:id,name,profile_picture'])
+            ->first();
+        
+        if (!$call) {
+            return response()->json(['success' => false, 'message' => 'Call not found'], 404);
+        }
+        
+        // Get other user
+        $otherUser = $call->caller_id == $userId 
+            ? $call->receiver 
+            : $call->caller;
+        
+        // Determine call type
+        $callType = strpos($call->room_id, 'audio_') === 0 ? 'audio' : 'video';
+        
+        // Determine call direction
+        $isOutgoing = $call->caller_id == $userId;
+        
+        // Calculate call duration
+        // For consistency between users, use ended_at for ended calls
+        // For active calls, use updated_at (last activity time) instead of now()
+        // This ensures both users see the same duration
+        $duration = null;
+        $durationText = '0:00';
+        if ($call->answered_at) {
+            // Use ended_at if call is ended, otherwise use updated_at for active calls
+            // This ensures both users see the same duration
+            if ($call->ended_at) {
+                // Call is ended - use ended_at
+                $endTime = $call->ended_at;
+            } else {
+                // Call is active - use updated_at (last activity time) instead of now()
+                // This ensures both users see the same duration
+                $endTime = $call->updated_at ?? $call->answered_at;
+            }
+            
+            $duration = $call->answered_at->diffInSeconds($endTime);
+            
+            // Ensure duration is not negative
+            if ($duration < 0) {
+                $duration = 0;
+            }
+            
+            $hours = floor($duration / 3600);
+            $minutes = floor(($duration % 3600) / 60);
+            $seconds = $duration % 60;
+            
+            if ($hours > 0) {
+                $durationText = sprintf('%d:%02d:%02d', $hours, $minutes, $seconds);
+            } else {
+                $durationText = sprintf('%d:%02d', $minutes, $seconds);
+            }
+        }
+        
+        // Get call history count (total calls between these two users)
+        $callHistoryCount = CallRequest::where(function($query) use ($userId, $otherUser) {
+                $query->where(function($q) use ($userId, $otherUser) {
+                    $q->where('caller_id', $userId)
+                      ->where('receiver_id', $otherUser->id);
+                })->orWhere(function($q) use ($userId, $otherUser) {
+                    $q->where('caller_id', $otherUser->id)
+                      ->where('receiver_id', $userId);
+                });
+            })
+            ->where(function($query) {
+                // Exclude group calls
+                $query->where('room_id', 'not like', 'group_%');
+            })
+            ->whereIn('status', ['accepted', 'ended'])
+            ->count();
+        
+        return response()->json([
+            'success' => true,
+            'call' => [
+                'id' => $call->id,
+                'room_id' => $call->room_id,
+                'type' => $callType,
+                'status' => $call->status,
+                'is_outgoing' => $isOutgoing,
+                'created_at' => $call->created_at,
+                'answered_at' => $call->answered_at,
+                'ended_at' => $call->ended_at,
+                'duration' => $duration,
+                'duration_text' => $durationText,
+            ],
+            'other_user' => [
+                'id' => $otherUser->id,
+                'name' => $otherUser->name,
+                'profile_picture' => $otherUser->profile_picture && file_exists(public_path('storage/profiles/' . $otherUser->profile_picture))
+                    ? asset('storage/profiles/' . $otherUser->profile_picture)
+                    : null,
+            ],
+            'call_history' => [
+                'total_calls' => $callHistoryCount,
+            ],
         ]);
     }
 

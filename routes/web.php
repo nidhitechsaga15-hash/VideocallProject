@@ -17,6 +17,10 @@ Route::middleware('guest')->group(function () {
     Route::get('/verify-otp', [AuthController::class, 'showOtpVerify'])->name('otp.verify');
     Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
     Route::post('/resend-otp', [AuthController::class, 'resendOtp'])->name('otp.resend');
+    
+    // Google OAuth routes
+    Route::get('/auth/google', [AuthController::class, 'redirectToGoogle'])->name('auth.google');
+    Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback'])->name('auth.google.callback');
 });
 
 // Protected routes
@@ -35,6 +39,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/call/reject', [VideoCallController::class, 'rejectCall'])->name('api.call.reject');
     Route::post('/api/call/end', [VideoCallController::class, 'endCall'])->name('api.call.end');
     Route::get('/api/call/status', [VideoCallController::class, 'checkCallStatus'])->name('api.call.status');
+    Route::get('/api/call/details', [VideoCallController::class, 'getCallDetails'])->name('api.call.details');
     Route::post('/api/call/add-user', [VideoCallController::class, 'addUserToCall'])->name('api.call.addUser');
     // WebRTC Signaling routes
     Route::post('/api/webrtc/offer', [VideoCallController::class, 'storeOffer'])->name('api.webrtc.offer');
